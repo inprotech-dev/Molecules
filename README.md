@@ -3,4 +3,4 @@ dependable
 
 Build reliable workflows in .NET
 
-[For more information](http://dependableproject.github.io/dependable/)
+[For more information](http://inprotech-dev.github.io/dependable)
