@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package >
   <metadata>
-    <id>$id$</id>
-    <title>$id$</title>
+    <id>cpaglobal-$id$</id>
+    <title>cpaglobal-$id$</title>
     <version>$version$</version>
     <authors>$author$</authors>
     <owners>$author$</owners>
