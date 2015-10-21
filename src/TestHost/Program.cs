@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using Dependable;
 using Dependable.Dispatcher;
-using Dependable.Extensions.Dependencies.Autofac;
 using Dependable.Extensions.Persistence.Sql;
 using Dependable.Tracking;
 
@@ -23,9 +21,9 @@ namespace TestHost
             _scheduler = new DependableConfiguration()
                 .SetDefaultRetryCount(1)
                 .SetDefaultRetryDelay(TimeSpan.FromSeconds(1))
-                .SetRetryTimerInterval(TimeSpan.FromSeconds(1))                
+                .SetRetryTimerInterval(TimeSpan.FromSeconds(1))
                 //.UseSqlPersistenceProvider("Default", "TestHost")
-                .UseConsoleEventLogger(EventType.JobStatusChanged | EventType.Exception)                
+                .UseConsoleEventLogger(EventType.JobStatusChanged | EventType.Exception)
                 //.Activity<Greet>(c => c.WithMaxQueueLength(1).WithMaxWorkers(1))
                 .CreateScheduler();
 
@@ -108,18 +106,22 @@ namespace TestHost
                     var lastName = "b" + i;
                     var activity = Activity.Run<GreetMany>(a => a.Run(new[] { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j"} ));
                     _scheduler.Schedule(activity);
-                }    
+                }
             }
 
             Console.WriteLine("Press enter to start scheduler");
             Console.ReadLine();
-            _scheduler.Start();        
+            _scheduler.Start();
             Console.ReadLine();
+
+            Console.WriteLine("Press enter to cleanup completed jobs");
+            Console.ReadLine();
+
+            DependableJobsTable.Clean(ConfigurationManager.ConnectionStrings["Default"].ConnectionString, "TestHost");
         }
     }
 
     public class Person
-
     {
         public string FirstName { get; set; }
         public string LastName { get; set; }
@@ -197,13 +199,13 @@ namespace TestHost
 // ReSharper disable once CSharpWarnings::CS1998
         public async Task Convert()
         {
-            Console.WriteLine("Convert");            
+            Console.WriteLine("Convert");
         }
 
 // ReSharper disable once CSharpWarnings::CS1998
         public async Task Notify()
         {
-            Console.WriteLine("Notify");            
+            Console.WriteLine("Notify");
         }
     }
 
