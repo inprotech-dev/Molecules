@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>cpaglobal-$id$</id>
-    <title>$id$</title>
+    <title>cpaglobal-$id$</title>
     <version>$version$</version>
     <authors>$author$</authors>
     <owners>$author$</owners>
@@ -15,7 +15,7 @@
     <copyright>Copyright © Dependable Team 2014</copyright>
     <tags>Scheduling Reliable Background Workflow Jobs</tags>
     <dependencies>  
-      <dependency id="Dependable" version="$version$" />
+      <dependency id="cpaglobal-Dependable" version="$version$" />
     </dependencies>
   </metadata>
 </package>
