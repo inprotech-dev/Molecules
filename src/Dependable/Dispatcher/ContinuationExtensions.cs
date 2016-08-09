@@ -24,7 +24,7 @@ namespace Dependable.Dispatcher
                     return failedHandler;
                 }
 
-                if (item.Status == JobStatus.Completed)
+                if (item.Status == JobStatus.Completed || item.Status == JobStatus.Cancelled)
                     return item.Next.PendingContinuations();
             }
 
@@ -85,7 +85,7 @@ namespace Dependable.Dispatcher
 
             // If this item is already completed we can continue if there's no next item or
             // next item can also continue.
-            if (item.Status == JobStatus.Completed)
+            if (item.Status == JobStatus.Completed || item.Status == JobStatus.Cancelled)
             {
                 return !isFailureHandler || item.Next == null || item.Next.CanContinue();
             }

@@ -6,6 +6,8 @@ namespace Dependable.Dispatcher
     public interface IContinuationLiveness
     {
         void Verify(Guid id);
+
+        bool IsValid(Guid id);
     }
 
     /// <summary>
@@ -44,8 +46,16 @@ namespace Dependable.Dispatcher
             
             if (currentJob.Status != JobStatus.WaitingForChildren)
                 return;
-                
+
             _continuationDispatcher.Dispatch(currentJob);
+        }
+
+        public bool IsValid(Guid id)
+        {
+            
+            var currentJob = _persistenceStore.Load(id);
+
+            return !(currentJob.Status == JobStatus.Cancelled || currentJob.Status == JobStatus.CancellationInitiated);
         }
     }
 }

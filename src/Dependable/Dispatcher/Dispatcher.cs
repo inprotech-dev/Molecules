@@ -95,6 +95,12 @@ namespace Dependable.Dispatcher
 
                 try
                 {
+                    if (!_continuationLiveness.IsValid(job.RootId))
+                    {
+                        _statusChanger.Change(job, JobStatus.Cancelled);
+                        return;
+                    }
+
                     job = _statusChanger.Change(job, JobStatus.Running);
 
                     var instance = scope.GetService(job.Type);

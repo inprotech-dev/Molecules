@@ -12,6 +12,7 @@ namespace Dependable
     public interface IScheduler
     {
         Task Start();
+        void Stop(Guid guid);
 
         Guid Schedule(Activity activity, Guid? correlationId = null);
     }
@@ -78,6 +79,13 @@ namespace Dependable
             await Task.WhenAny(tasks).FailFastOnException();
         }
 
+        public void Stop(Guid guid)
+        {
+            var job = _persistenceStore.Load(guid);
+            if(job.ParentId == null)
+                _jobMutator.Mutate<Scheduler>(job, JobStatus.CancellationInitiated);
+        }
+
         public Guid Schedule(Activity activity, Guid? correlationId = null)
         {
             if (activity == null) throw new ArgumentNullException("activity");
@@ -98,7 +106,7 @@ namespace Dependable
 
             job = _jobMutator.Mutate<Scheduler>(job, continuation: converted.Continuation);            
             _router.Route(job);
-                
+            
             return job.Id;
         }
     }

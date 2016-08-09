@@ -17,6 +17,7 @@ namespace Dependable.Tests.Dispatcher
             [Theory]
             [InlineData(JobStatus.Completed)]
             [InlineData(JobStatus.Poisoned)]
+            [InlineData(JobStatus.Cancelled)]
             public void ShouldGoStraightIntoEndStatus(JobStatus status)
             {
                 var job = _world.NewJob.In(JobStatus.Running);
@@ -34,6 +35,7 @@ namespace Dependable.Tests.Dispatcher
             [Theory]
             [InlineData(JobStatus.Completed, JobStatus.ReadyToComplete)]
             [InlineData(JobStatus.Poisoned, JobStatus.ReadyToPoison)]
+            [InlineData(JobStatus.Cancelled, JobStatus.CancellationInitiated)]
             public void ShouldGoToIntermediaryStatusBeforeEndStatus(JobStatus status,
                 JobStatus intermediaryStatus)
             {
@@ -46,9 +48,10 @@ namespace Dependable.Tests.Dispatcher
             }
 
             [Theory]
-            [InlineData(JobStatus.Completed)]
-            [InlineData(JobStatus.Poisoned)]
-            public void ParentShouldGoToIntermediaryStatusBeforeEndStatus(JobStatus status)
+            [InlineData(JobStatus.Completed, JobStatus.ReadyToComplete)]
+            [InlineData(JobStatus.Poisoned, JobStatus.ReadyToComplete)]
+            [InlineData(JobStatus.Cancelled, JobStatus.CancellationInitiated)]
+            public void ParentShouldGoToIntermediaryStatusBeforeEndStatus(JobStatus status, JobStatus expecedStatus)
             {
                 Job root = _world.NewJob.In(JobStatus.WaitingForChildren);
                 Job parent = _world.NewJob.In(JobStatus.WaitingForChildren).AsChildOf(ref root, JobStatus.Ready);
@@ -56,7 +59,8 @@ namespace Dependable.Tests.Dispatcher
 
                 _world.NewEndTransition().Transit(child, status);
 
-                _world.JobMutator.Mutations(parent).Verify(JobStatus.ReadyToComplete, JobStatus.Completed);
+                var completionStatus = status == JobStatus.Poisoned ? JobStatus.Completed : status;
+                _world.JobMutator.Mutations(parent).Verify(expecedStatus, completionStatus);
             }
 
             [Theory]
@@ -70,6 +74,30 @@ namespace Dependable.Tests.Dispatcher
                 _world.NewEndTransition().Transit(child, status);
 
                 _world.JobMutator.Mutations(root).Verify(JobStatus.Completed);
+            }
+
+            [Fact]      
+            public void RootShouldNotCancelIfCancellationNotInitiated()
+            {
+                var status = JobStatus.Cancelled;
+                Job root = _world.NewJob.In(JobStatus.WaitingForChildren);
+                var child = _world.NewJob.In(JobStatus.Running).AsChildOf(ref root, JobStatus.Ready);
+
+                _world.NewEndTransition().Transit(child, status);
+
+                _world.JobMutator.Mutations(root).Verify(JobStatus.Completed);
+            }
+
+            [Fact]
+            public void RootShouldCancelIfCancellationInitiated()
+            {
+                var status = JobStatus.Cancelled;
+                Job root = _world.NewJob.In(JobStatus.CancellationInitiated);
+                var child = _world.NewJob.In(JobStatus.Running).AsChildOf(ref root, JobStatus.Ready);
+
+                _world.NewEndTransition().Transit(child, status);
+
+                _world.JobMutator.Mutations(root).Verify(JobStatus.Cancelled);
             }
         }
         

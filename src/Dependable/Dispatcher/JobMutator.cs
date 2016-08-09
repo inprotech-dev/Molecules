@@ -34,19 +34,22 @@ namespace Dependable.Dispatcher
             Continuation continuation = null,
             bool? suspended = null)
         {
+            if (job.Status == JobStatus.Cancelled && status != null)
+                status = null;
+
             var newJob = new Job(job.Id,
-                job.Type, 
-                job.Method, 
-                job.Arguments, 
-                job.CreatedOn, 
-                job.RootId, 
+                job.Type,
+                job.Method,
+                job.Arguments,
+                job.CreatedOn,
+                job.RootId,
                 job.ParentId,
-                job.CorrelationId, 
-                status ?? job.Status, 
-                dispatchCount ?? job.DispatchCount, 
+                job.CorrelationId,
+                status ?? job.Status,
+                dispatchCount ?? job.DispatchCount,
                 retryOn ?? job.RetryOn,
-                job.ExceptionFilters, 
-                continuation ?? job.Continuation, 
+                job.ExceptionFilters,
+                continuation ?? job.Continuation,
                 suspended ?? job.Suspended);
 
             _repository.Store(newJob);

@@ -37,6 +37,8 @@ namespace Dependable.Tests.Dispatcher
         [InlineData(JobStatus.Completed)]
         [InlineData(JobStatus.ReadyToPoison)]
         [InlineData(JobStatus.Poisoned)]
+        [InlineData(JobStatus.Cancelled)]
+        [InlineData(JobStatus.CancellationInitiated)]
         public void DoesNotTransitToRunningFrom(JobStatus status)
         {
             var job = _world.NewJob.In(status);
@@ -61,6 +63,8 @@ namespace Dependable.Tests.Dispatcher
         [InlineData(JobStatus.Failed)]
         [InlineData(JobStatus.ReadyToPoison)]
         [InlineData(JobStatus.Poisoned)]
+        [InlineData(JobStatus.Cancelled)]
+        [InlineData(JobStatus.CancellationInitiated)]
         public void DoesNotTransitToCompletedFrom(JobStatus status)
         {
             var job = _world.NewJob.In(status);
@@ -86,6 +90,8 @@ namespace Dependable.Tests.Dispatcher
         [InlineData(JobStatus.Completed)]
         [InlineData(JobStatus.ReadyToPoison)]
         [InlineData(JobStatus.Poisoned)]
+        [InlineData(JobStatus.Cancelled)]
+        [InlineData(JobStatus.CancellationInitiated)]
         public void DoesNotTransitToFailedFrom(JobStatus status)
         {
             Job job = _world.NewJob.In(status);
@@ -109,7 +115,9 @@ namespace Dependable.Tests.Dispatcher
         [InlineData(JobStatus.WaitingForChildren)]
         [InlineData(JobStatus.Failed)]
         [InlineData(JobStatus.ReadyToComplete)]
-        [InlineData(JobStatus.Completed)]        
+        [InlineData(JobStatus.Completed)]
+        [InlineData(JobStatus.Cancelled)]
+        [InlineData(JobStatus.CancellationInitiated)]
         public void DoesNotTransitToPoisonedFrom(JobStatus status)
         {
             var job = _world.NewJob.In(status);
@@ -135,11 +143,40 @@ namespace Dependable.Tests.Dispatcher
         [InlineData(JobStatus.Completed)]
         [InlineData(JobStatus.ReadyToPoison)]
         [InlineData(JobStatus.Poisoned)]
+        [InlineData(JobStatus.Cancelled)]
+        [InlineData(JobStatus.CancellationInitiated)]
         public void DoesNotTransitToWaitingForChildrenFrom(JobStatus status)
         {
             var job = _world.NewJob.In(status);
             _changeStatus().Change(job, JobStatus.WaitingForChildren);
             _world.WaitingForChildrenTransition.DidNotReceive().Transit(job, null);
+        }
+
+        [Theory]
+        [InlineData(JobStatus.CancellationInitiated)]
+        [InlineData(JobStatus.Ready)]
+        [InlineData(JobStatus.Failed)]
+        public void TransitsToCancelledFrom(JobStatus status)
+        {
+            var job = _world.NewJob.In(status);
+            _changeStatus().Change(job, JobStatus.Cancelled);
+            _world.EndTransition.Received(1).Transit(job, JobStatus.Cancelled );
+        }
+
+        [Theory]
+        [InlineData(JobStatus.ReadyToComplete)]
+        [InlineData(JobStatus.Completed)]
+        [InlineData(JobStatus.ReadyToPoison)]
+        [InlineData(JobStatus.Poisoned)]
+        [InlineData(JobStatus.Cancelled)]
+        [InlineData(JobStatus.Running)]
+        [InlineData(JobStatus.WaitingForChildren)]
+        [InlineData(JobStatus.Created)]
+        public void DoesNotTransitToCancelledFrom(JobStatus status)
+        {
+            var job = _world.NewJob.In(status);
+            _changeStatus().Change(job, JobStatus.Cancelled);
+            _world.EndTransition.DidNotReceive().Transit(job, JobStatus.Cancelled);
         }
     }
 }
