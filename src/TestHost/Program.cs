@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Dependable;
 using Dependable.Dispatcher;
@@ -19,101 +20,84 @@ namespace TestHost
             DependableJobsTable.Create(ConfigurationManager.ConnectionStrings["Default"].ConnectionString);
 
             _scheduler = new DependableConfiguration()
-                .SetDefaultRetryCount(1)
+                .SetDefaultRetryCount(2)
                 .SetDefaultRetryDelay(TimeSpan.FromSeconds(1))
                 .SetRetryTimerInterval(TimeSpan.FromSeconds(1))
-                //.UseSqlPersistenceProvider("Default", "TestHost")
-                .UseConsoleEventLogger(EventType.JobStatusChanged | EventType.Exception)
-                //.Activity<Greet>(c => c.WithMaxQueueLength(1).WithMaxWorkers(1))
+                .UseSqlPersistenceProvider("Default", "TestHost")
+                .UseConsoleEventLogger(EventType.JobStatusChanged | EventType.JobSuspended)
+                .Activity<Greet>(c => c.WithMaxQueueLength(3).WithMaxWorkers(3))
                 .CreateScheduler();
 
-            // _scheduler.Start();
+            _scheduler.Start();
 
-            // _scheduler.Schedule(Activity.Run<Greet>(g => g.Run("alice", "cooper")).Then<Greet>(g => g.Run("bob", "jane")));
-            //_scheduler.Schedule(Activity.Sequence(Activity.Run<Greet>(g => g.Run("ian", "patrick")),
-            //    Activity.Run<Greet>(g => g.Run("james", "bond"))));
+            Console.WriteLine("Dependable Examples");
+            Console.WriteLine("1. Single Activity");
+            Console.WriteLine("2: Activity Sequence");
+            Console.WriteLine("3. Parallel Activity");
+            Console.WriteLine("4. Logger Filter");
+            Console.WriteLine("5. Exception Filter");
+            Console.WriteLine("6. Job cancellation");
 
-            //_scheduler.Schedule(Activity.Run<Greet>(g => g.Run("bob", "jane")));
-            //_scheduler.Schedule(Activity.Run<Greet>(g => g.Run("kyle", "simpson")));
-            //_scheduler.Schedule(Activity.Run<Greet>(g => g.Run("andrew", "matthews")));
+            var option = Convert.ToInt32(Console.ReadLine());
 
-            var sequence = Activity
-                .Sequence(
-                    Activity.Run<Greet>(g => g.Run("a", "b")),
-                    Activity.Run<Greet>(g => g.Run("c", "d")))
-                .ExceptionFilter<LoggingFilter>((c, f) => f.Log(c, "hey"))
-                .AnyFailed<Greet>(g => g.Run("e", "f"))
-                .ThenContinue()
-                .Then<Greet>(g => g.Run("g", "h"));
-
-            // _scheduler.Schedule(sequence);
-
-            //_scheduler.Schedule(Activity.Parallel(
-            //        Activity.Run<Greet>(g => g.Run("a", "b")).Then<Greet>(g => g.Run("e", "f")),
-            //        Activity.Run<Greet>(g => g.Run("g", "h")).Then<Greet>(g => g.Run("i", "j"))
-            //    ));
-
-            //_scheduler.Schedule(
-            //    Activity.Run<Greet>(g => g.Run("c", "d"))
-            //    .ExceptionFilter<LoggingFilter>((c, f) => f.Log(c, "ouch"))
-            //    .Failed<Greet>(g => g.Run("a", "b")));
-
-            //var person = new Person { FirstName = "Allen", LastName = "Jones" };
-            //_scheduler.Schedule(Activity.Run<GreetEx>(a => a.Run(person)));
-
-            //_scheduler.Schedule(Activity.Run<DueSchedule>(a => a.Run()));
-
-            //var parallel = Activity.Parallel(
-            //    Activity.Run<Greet>(g => g.Run("a", "b")),
-            //    Activity.Run<Greet>(g => g.Run("d", "e")));
-
-            //_scheduler.Schedule(parallel);
-
-            //_scheduler.Schedule(
-            //    Activity
-            //        .Run<Greet>(g => g.Run("buddhike", "de silva"))
-            //        .ExceptionFilter<LoggingFilter>((c, f) => f.Log(c, "something was wrong")));
-
-            _scheduler.Schedule(Activity.Run<GreetMany>(a => a.Run(new[] { "a", "b" })).Then<Greet>(g => g.Run("d", "e")));
-
-            //var group = Activity
-            //    .Parallel(
-            //    Activity.Run<Greet>(a => a.Run("a", "b")),
-            //    Activity.Run<Greet>(a => a.Run("a", "b")),
-            //    Activity.Run<Greet>(a => a.Run("a", "b")))
-            //    .ExceptionFilter<LoggingFilter>((c, f) => f.Log(c, "something went wrong"));
-
-            //_scheduler.Schedule(group.AnyFailed<Greet>(a => a.Run("a", "b")));
-
-            //_scheduler.Schedule(
-            //    Activity.Run<GreetMany>(g => g.Run(new[] { "c" }))
-            //    .ExceptionFilter<LoggingFilter>((c, f) => f.Log(c, "interesting")));
-
-            //for (var i = 0; i < 1000000; i++)
-            //{
-            //    var nameA = "a" + i;
-            //    var nameB = "b" + i;
-            //    var activity = Activity.Run<GreetMany>(a => a.Run(new[] { nameA, nameB }));
-            //    Task.Run(() => _scheduler.Schedule(activity));
-            //}
-            Console.Write("Generate new work? Y/N(Y)");
-            var generate = Console.ReadLine().ToUpper();
-            if (generate == "Y")
+            switch (option)
             {
-                for (var i = 0; i < 1; i++)
-                {
-                    var firstName = "a" + i;
-                    var lastName = "b" + i;
-                    var activity = Activity.Run<GreetMany>(a => a.Run(new[] { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j"} ));
-                    _scheduler.Schedule(activity);
-                }
+                case 1:
+                    _scheduler.Schedule(
+                        Activity.Run<Greet>(g => g.Run("alice", "cooper")).Then<Greet>(g => g.Run("bob", "jane")));
+                    _scheduler.Schedule(Activity.Run<Greet>(g => g.Run("bob", "jane")));
+                    _scheduler.Schedule(Activity.Run<Greet>(g => g.Run("kyle", "simpson")));
+                    _scheduler.Schedule(Activity.Run<Greet>(g => g.Run("andrew", "matthews")));
+                    break;
+                case 2:
+                    var sequence = Activity
+                        .Sequence(
+                            Activity.Run<Greet>(g => g.Run("a", "b")),
+                            Activity.Run<Greet>(g => g.Run("c", "d")))
+                        .ExceptionFilter<LoggingFilter>((c, f) => f.Log(c, "hey"))
+                        .AnyFailed<Greet>(g => g.Run("e", "f"))
+                        .Cancelled<GreetCancelled>(d => d.Run())
+                        .ThenContinue()
+                        .Then<Greet>(g => g.Run("g", "h"));
+                    _scheduler.Schedule(sequence);
+                    break;
+                case 3:
+                    _scheduler.Schedule(Activity.Parallel(
+                        Activity.Run<Greet>(g => g.Run("a", "b")).Then<Greet>(g => g.Run("e", "f")),
+                        Activity.Run<Greet>(g => g.Run("g", "h")).Then<Greet>(g => g.Run("i", "j"))
+                        ));
+                    break;
+                case 4:
+                    _scheduler.Schedule(
+                        Activity
+                            .Run<Greet>(g => g.Run("buddhike", "de silva"))
+                            .ExceptionFilter<LoggingFilter>((c, f) => f.Log(c, "something was wrong")));
+                    break;
+                case 5:
+                    _scheduler.Schedule(
+                        Activity.Run<Greet>(g => g.Run("c", "d"))
+                            .ExceptionFilter<LoggingFilter>((c, f) => f.Log(c, "ouch"))
+                            .Failed<Greet>(g => g.Run("a", "b")));
+                    break;
+                case 6:
+                    Console.WriteLine("Enter 'y' to initate job cancellation at any time");
+                    Console.WriteLine("Press any key to start the schedule");
+                    Console.ReadLine();
+
+                    var stopToken = Guid.NewGuid();
+
+                    _scheduler.Schedule(
+                        Activity.Run<DueSchedule>(a => a.Run()).Cancelled(Activity.Run<CancelSchedule>(d => d.Run())),
+                        stopToken);
+
+                    if (ConsoleKey.Y == Console.ReadKey().Key)
+                    {
+                        _scheduler.Stop(stopToken);
+                    }
+                    break;
             }
 
-            Console.WriteLine("Press enter to start scheduler");
             Console.ReadLine();
-            _scheduler.Start();
-            Console.ReadLine();
-
             Console.WriteLine("Press enter to cleanup completed jobs");
             Console.ReadLine();
 
@@ -129,7 +113,7 @@ namespace TestHost
 
     public class GreetEx
     {
-// ReSharper disable once CSharpWarnings::CS1998
+        // ReSharper disable once CSharpWarnings::CS1998
         public async Task Run(Person person)
         {
             Console.WriteLine("Hello {0} {1}", person.FirstName, person.LastName);
@@ -138,74 +122,128 @@ namespace TestHost
 
     public class Greet
     {
-// ReSharper disable once CSharpWarnings::CS1998
+        // ReSharper disable once CSharpWarnings::CS1998
         public async Task Run(string firstName, string lastName)
         {
             Console.WriteLine("hello {0} {1}", firstName, lastName);
-            //System.Threading.Thread.Sleep(2000);
             if (firstName == "c")
-                throw new Exception("la la la");
+                throw new Exception("Failed!");
         }
     }
 
     public class GreetMany
     {
-// ReSharper disable once CSharpWarnings::CS1998
+        // ReSharper disable once CSharpWarnings::CS1998
         public async Task<Activity> Run(IEnumerable<string> names)
         {
             return Activity.Sequence(Enumerable.Empty<Activity>());
         }
     }
 
+    public class GreetCancelled
+    {
+        // ReSharper disable once CSharpWarnings::CS1998
+        public async Task Run()
+        {
+            Console.WriteLine("Bye! Party over!");
+        }
+    }
+
     public class DueSchedule
     {
-// ReSharper disable once CSharpWarnings::CS1998
+        // ReSharper disable once CSharpWarnings::CS1998
         public async Task<Activity> Run()
         {
-            return Activity.Sequence(Activity.Run<ApplicationList>(a => a.Download()),
-                Activity.Run<ApplicationList>(a => a.DownloadEachItem()));
+            Console.WriteLine("DueSchedule");
+            Thread.Sleep(5000);
+
+            return
+                Activity.Sequence(Activity.Run<ApplicationList>(a => a.Download()),
+                    Activity.Run<ApplicationList>(a => a.DownloadEachItem()));
+            //.Cancelled(Activity.Run<CancelApplicationList>(g => g.Run()));
+        }
+    }
+
+    public class CancelApplicationList
+    {
+        // ReSharper disable once CSharpWarnings::CS1998
+        public async Task Run()
+        {
+            Console.WriteLine("CancelApplicationList");
+        }
+    }
+
+
+    public class CancelSchedule
+    {
+        // ReSharper disable once CSharpWarnings::CS1998
+        public async Task Run()
+        {
+            Console.WriteLine("CancelSchedule");
         }
     }
 
     public class ApplicationList
     {
-// ReSharper disable once CSharpWarnings::CS1998
+        // ReSharper disable once CSharpWarnings::CS1998
         public async Task Download()
         {
-            Console.WriteLine("Download List");
+            Thread.Sleep(10000);
+            Console.WriteLine("ApplicationList - Download");
         }
 
-// ReSharper disable once CSharpWarnings::CS1998
+        // ReSharper disable once CSharpWarnings::CS1998
         public async Task<Activity> DownloadEachItem()
         {
-            Console.WriteLine("Download Each Item");
-
-            return Activity.Sequence(
-                    Activity.Run<ApplicationDetails>(a => a.Download()),
+            Console.WriteLine("ApplicationList - Download Each Item");
+            return
+                Activity.Parallel(
+                    Activity.Run<ApplicationDetails>(a => a.Download())
+                        .Cancelled(Activity.Run<ApplicationDetails.CancelDownload>(notify => notify.Run())),
                     Activity.Run<ApplicationDetails>(a => a.Convert()),
-                    Activity.Run<ApplicationDetails>(a => a.Notify())
-                );
+                    Activity.Run<ApplicationDetails>(a => a.Notify()));
+            //.Cancelled(Activity.Run<ApplicationDetails>(notify => notify.CancelTask()));
         }
     }
 
     public class ApplicationDetails
     {
-// ReSharper disable once CSharpWarnings::CS1998
+        // ReSharper disable once CSharpWarnings::CS1998
         public async Task Download()
         {
-            Console.WriteLine("Download One");
+            Thread.Sleep(5000);
+            Console.WriteLine("ApplicationDetails Download");
         }
 
-// ReSharper disable once CSharpWarnings::CS1998
+        // ReSharper disable once CSharpWarnings::CS1998
         public async Task Convert()
         {
-            Console.WriteLine("Convert");
+            Thread.Sleep(5000);
+            Console.WriteLine("ApplicationDetails Convert");
         }
 
-// ReSharper disable once CSharpWarnings::CS1998
+        // ReSharper disable once CSharpWarnings::CS1998
         public async Task Notify()
         {
-            Console.WriteLine("Notify");
+            Console.WriteLine("NOWWWWWWW");
+            Thread.Sleep(5000);
+            Console.WriteLine("ApplicationDetails Notify");
+            throw new Exception("A");
+        }
+
+        // ReSharper disable once CSharpWarnings::CS1998
+        public async Task CancelTask()
+        {
+            Console.WriteLine("ApplicationDetails CancelTask");
+        }
+
+        public class CancelDownload
+        {
+            // ReSharper disable once CSharpWarnings::CS1998
+            public async Task Run()
+            {
+                Console.WriteLine("ApplicationDetails CancelDownload");
+            }
         }
     }
 

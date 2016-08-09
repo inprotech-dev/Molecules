@@ -99,6 +99,22 @@ namespace Dependable
             return activity.AllFailed(Activity.Run(func));
         }
 
+        public static ActivityGroup Cancelled<T>(this ActivityGroup activity,
+            Expression<Func<T, Task>> func)
+        {
+            if (activity == null) throw new ArgumentNullException("activity");
+
+            return activity.Cancelled(Activity.Run(func));
+        }
+
+        public static ActivityGroup Cancelled<T>(this ActivityGroup activity,
+            Expression<Func<T, Task<Activity>>> func)
+        {
+            if (activity == null) throw new ArgumentNullException("activity");
+
+            return activity.Cancelled(Activity.Run(func));
+        }
+
         public static SingleActivity ExceptionFilter<TFilter>(this SingleActivity activity, 
             Expression<Action<ExceptionContext, TFilter>> filter)
         {

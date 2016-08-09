@@ -28,6 +28,7 @@ namespace Dependable.Tests
             Dispatcher = Substitute.For<IDispatcher>();
             ContinuationLiveness = Substitute.For<IContinuationLiveness>();
             JobCoordinator = Substitute.For<IJobCoordinator>();
+            JobRootValidator = Substitute.For<IJobRootValidator>();
 
             Now = () => Fixture.Now;
 
@@ -86,6 +87,8 @@ namespace Dependable.Tests
         public IRecoverableAction RecoverableAction { get; set; }
 
         public IStatusChanger StatusChanger { get; set; }
+
+        public IJobRootValidator JobRootValidator { get; set; }
 
         public Func<DateTime> Now { get; set; }
 

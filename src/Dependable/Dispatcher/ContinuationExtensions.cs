@@ -5,7 +5,7 @@ namespace Dependable.Dispatcher
 {
     public static class ContinuationExtensions
     {
-        public static IEnumerable<Continuation> PendingContinuations(this Continuation item)
+        public static IEnumerable<Continuation> PendingContinuations(this Continuation item, bool isValid = true)
         {
             if (item == null) return Enumerable.Empty<Continuation>();
 
@@ -16,48 +16,94 @@ namespace Dependable.Dispatcher
 
                 if (item.Status == JobStatus.Poisoned)
                 {
-                    var failedHandler = item.OnAllFailed.PendingContinuations().ToArray();
+                    var failedHandler = item.OnAllFailed.PendingContinuations(isValid).ToArray();
 
                     if (!failedHandler.Any() && item.CanContinue())
-                        return item.Next.PendingContinuations();
+                        return item.Next.PendingContinuations(isValid);
 
                     return failedHandler;
                 }
 
-                if (item.Status == JobStatus.Completed)
-                    return item.Next.PendingContinuations();
-            }
+                if (item.Status == JobStatus.Cancelled || item.Status == JobStatus.CancellationInitiated ||
+                    item.Status == JobStatus.Cancelling)
+                {
+                    var cancelledHandler = item.OnCancelled.PendingContinuations(isValid).ToArray();
+                    if (cancelledHandler.Any())
+                        return cancelledHandler;
 
+                    return item.Next.PendingContinuations(isValid);
+                }
+
+                if (item.Status == JobStatus.Completed)
+                {
+                    if (isValid)
+                        return item.Next.PendingContinuations();
+
+                    var pendingCancellations = PendingCancellations(item).ToArray();
+                    if (pendingCancellations.Any())
+                        return pendingCancellations;
+                }
+            }
             if (item.Type == ContinuationType.Parallel)
             {
-                var children = item.Children.SelectMany(a => a.PendingContinuations()).ToArray();
-                if (children.Any()) return children;    
+                var children =
+                    item.Children.Where(_ => _.Status != JobStatus.Cancelled)
+                        .SelectMany(a => a.PendingContinuations(isValid))
+                        .ToArray();
+                if (children.Any()) return children;
             }
 
             if (item.Type == ContinuationType.Sequence)
             {
-                foreach (var child in item.Children)
+                foreach (var child in item.Children.Where(_ => _.Status != JobStatus.Cancelled))
                 {
-                    var children = child.PendingContinuations().ToArray();
+                    var children = child.PendingContinuations(isValid).ToArray();
                     if (children.Any()) return children;
                     if (!child.CanContinue()) break;
                 }
             }
-            
+
             var anyFailureHandlers = Enumerable.Empty<Continuation>();
             var allFailureHandlers = Enumerable.Empty<Continuation>();
 
             var failedChildren = item.Children.Where(c => !c.CanContinue()).ToArray();
 
-            if (failedChildren.Any()) anyFailureHandlers = item.OnAnyFailed.PendingContinuations();
+            if (failedChildren.Any()) anyFailureHandlers = item.OnAnyFailed.PendingContinuations(isValid);
             if (failedChildren.Length == item.Children.Count())
-                allFailureHandlers = item.OnAllFailed.PendingContinuations();
+                allFailureHandlers = item.OnAllFailed.PendingContinuations(isValid);
 
             var resultArray = anyFailureHandlers.Concat(allFailureHandlers).ToArray();
 
-            return resultArray.Any()
-                ? resultArray
-                : item.CanContinue() ? item.Next.PendingContinuations() : Enumerable.Empty<Continuation>();
+            if (resultArray.Any())
+                return resultArray;
+
+            if (item.CanContinue() && isValid)
+                return item.Next.PendingContinuations();
+
+            if (!isValid)
+            {
+                var pendingCancellations = PendingCancellations(item).ToArray();
+                if (pendingCancellations.Any())
+                    return pendingCancellations;
+            }
+
+            return Enumerable.Empty<Continuation>();
+        }
+
+        //This is to ensure the descendents cancellations are considered
+        public static IEnumerable<Continuation> PendingCancellations(this Continuation item)
+        {
+            if (item.IsCancelled())
+            {
+                var cancelledHandlers = item.OnCancelled.PendingContinuations(false).ToArray();
+                if (cancelledHandlers.Any())
+                    return cancelledHandlers;
+
+                return item.Children.Where(c => c.IsCancelled())
+                    .SelectMany(_ => _.PendingCancellations())
+                    .ToArray();
+            }
+            return Enumerable.Empty<Continuation>();
         }
 
         public static bool CanContinue(this Continuation item, bool isFailureHandler = false)
@@ -100,7 +146,20 @@ namespace Dependable.Dispatcher
             return false;
         }
 
-        public static Continuation Find(this Continuation @await, Job child)
+        public static bool IsCancelled(this Continuation item)
+        {
+            if (item.Status == JobStatus.Cancelled)
+                return true;
+
+            if (item.Children.Any())
+            {
+                return item.Children.Any(c => c.IsCancelled());
+            }
+
+            return false;
+        }
+
+        public static Continuation Find(this Continuation @await, Job child, bool isValid = true)
         {
             if (@await == null) return null;
 
@@ -111,12 +170,15 @@ namespace Dependable.Dispatcher
             result = result ?? @await.OnAllFailed.Find(child);
             result = result ?? @await.Next.Find(child);
 
+            if (!isValid)
+                result = result ?? @await.OnCancelled.Find(child);
+
             if (result != null)
                 return result;
 
             return @await
                 .Children
-                .Select(c => c.Find(child))
+                .Select(c => c.Find(child, isValid))
                 .FirstOrDefault(match => match != null);
         }
     }

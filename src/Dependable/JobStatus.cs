@@ -10,6 +10,9 @@
         ReadyToComplete,
         Completed,
         ReadyToPoison,
-        Poisoned
+        Poisoned,
+        CancellationInitiated,
+        Cancelling,
+        Cancelled
     }
 }

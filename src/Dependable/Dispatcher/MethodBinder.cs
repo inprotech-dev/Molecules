@@ -12,7 +12,7 @@ namespace Dependable.Dispatcher
 
     public class MethodBinder : IMethodBinder
     {
-        static readonly IEnumerable<Type> ValidReturnTypes = new[] {typeof (Task), typeof (Task<Activity>) };
+        static readonly IEnumerable<Type> ValidReturnTypes = new[] {typeof (Task), typeof (Task<Activity>)};
 
         public async Task<JobResult> Run(object instance, Job job)
         {
@@ -25,7 +25,15 @@ namespace Dependable.Dispatcher
                     string.Format("Type {0} does not have a matching Run method.", type.FullName));
             }
 
-            var result = runMethod.Invoke(instance, job.Arguments);
+            var requiresCancellationToken =
+                runMethod.GetCustomAttributes(typeof (RequiresCancellationTokenAttribute), false)
+                    .Cast<RequiresCancellationTokenAttribute>()
+                    .SingleOrDefault();
+
+            var result = requiresCancellationToken == null
+                ? runMethod.Invoke(instance, job.Arguments)
+                : runMethod.Invoke(instance, ExpandArgsWithCancellationToken(job));
+
             if (result == null)
                 return null;
 
@@ -35,7 +43,27 @@ namespace Dependable.Dispatcher
                 return new JobResult();
             }
 
-            return new JobResult(await (Task<Activity>) result);            
+            return new JobResult(await (Task<Activity>) result);
+        }
+
+        static object[] ExpandArgsWithCancellationToken(Job job)
+        {
+            return (new List<object>(job.Arguments ?? new object[0]) {new CancellationToken(job.RootId)}).ToArray();
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Method, Inherited = false)]
+    public class RequiresCancellationTokenAttribute : Attribute
+    {
+    }
+
+    public class CancellationToken
+    {
+        public Guid Value { get; private set; }
+
+        public CancellationToken(Guid token)
+        {
+            Value = token;
         }
     }
 }

@@ -31,7 +31,7 @@ namespace Dependable.Extensions.Persistence.Sql
 
         public static void Clean(string connectionString, string instanceName = null, Guid jobId = default (Guid))
         {
-            const string commandText = "Delete from DependableJobs where {0} RootId in ( select Id from DependableJobs where ParentId is NULL and Status in ('Completed', 'Poisoned'))";
+            const string commandText = "Delete from DependableJobs where {0} RootId in ( select Id from DependableJobs where ParentId is NULL and Status in ('Completed', 'Poisoned', 'Cancelled'))";
             var additionalConditions = string.Empty;
             var command = new SqlCommand();
             

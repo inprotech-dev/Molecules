@@ -119,17 +119,17 @@ namespace Dependable
 
             var router = new JobRouter(queueConfiguration);
             var methodBinder = new MethodBinder();
+            var jobRootValidator = new JobRootValidator(delegatingPersistenceStore);
 
             var continuationDispatcher = new ContinuationDispatcher(router, jobMutation,
-                delegatingPersistenceStore, recoverableAction);
+                delegatingPersistenceStore, recoverableAction, jobRootValidator);
             var activityToContinuationConverter = new ActivityToContinuationConverter(now);
 
             var runningTransition = new RunningTransition(jobMutation);
             var failedTransition = new FailedTransition(this, jobMutation, now);
-            var endTransition = new EndTransition(delegatingPersistenceStore, jobMutation,
-                continuationDispatcher);
-            
             var continuationLiveness = new ContinuationLiveness(delegatingPersistenceStore, continuationDispatcher);
+
+            var endTransition = new EndTransition(delegatingPersistenceStore, jobMutation, continuationDispatcher, jobRootValidator);
 
             var coordinator = new JobCoordinator(eventStream, recoverableAction);
 
@@ -158,7 +158,8 @@ namespace Dependable
                 recoverableAction,
                 changeState,
                 continuationLiveness,
-                exceptionFilterDispatcher);
+                exceptionFilterDispatcher, 
+                jobRootValidator);
 
             var jobPumps =
                 queueConfiguration

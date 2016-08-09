@@ -25,6 +25,10 @@ namespace Dependable.Dispatcher
 
         public Continuation OnAllFailed { get; set; }
 
+        public Continuation OnCancelled { get; set; }
+
         public bool ContinueAfterHandlingFailure { get; set; }
+
+        public bool CompensateForCancellation { get; set; }
     }
 }

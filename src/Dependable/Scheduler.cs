@@ -13,7 +13,9 @@ namespace Dependable
     {
         Task Start();
 
-        Guid Schedule(Activity activity, Guid? correlationId = null);
+        void Stop(Guid guid);
+
+        void Schedule(Activity activity, Guid? nominatedRootId = null);
     }
 
     public class Scheduler : IScheduler
@@ -51,7 +53,7 @@ namespace Dependable
             if (activityToContinuationConverter == null)
                 throw new ArgumentNullException("activityToContinuationConverter");
             if (jobPumps == null) throw new ArgumentNullException("jobPumps");
-            if (jobMutator == null) throw new ArgumentNullException("JobMutator");
+            if (jobMutator == null) throw new ArgumentNullException("jobMutator");
 
             _persistenceStore = persistenceStore;
             _now = now;
@@ -68,38 +70,41 @@ namespace Dependable
         {
             if (_hasStarted)
                 throw new InvalidOperationException("This scheduler is already started.");
-            
+
             _hasStarted = true;
 
             _failedJobQueue.Monitor();
             _recoverableAction.Monitor();
 
-            var tasks =_jobPumps.Select(p => p.Start()).ToArray();            
+            var tasks = _jobPumps.Select(p => p.Start()).ToArray();
             await Task.WhenAny(tasks).FailFastOnException();
         }
 
-        public Guid Schedule(Activity activity, Guid? correlationId = null)
+        public void Stop(Guid guid)
+        {
+            var job = _persistenceStore.Load(guid);
+
+            if (job == null)
+                return;
+
+            if (job.ParentId == null && job.Status != JobStatus.Completed)
+                _jobMutator.Mutate<Scheduler>(job, JobStatus.CancellationInitiated);
+        }
+
+        public void Schedule(Activity activity, Guid? nominatedRootId = null)
         {
             if (activity == null) throw new ArgumentNullException("activity");
 
-            if (correlationId != null)
-            {
-                var existing = _persistenceStore.LoadBy(correlationId.Value);
-                if (existing != null)
-                    return existing.Id;
-            }
-            
-            var job = new Job(Guid.NewGuid(), typeof (JobRoot), "Run", new object[0], _now(),
-                    correlationId: correlationId,
-                    status: JobStatus.WaitingForChildren);
+            var jobRoot = nominatedRootId ?? Guid.NewGuid();
+
+            var job = new Job(jobRoot, typeof(JobRoot), "Run", new object[0], _now(),
+                status: JobStatus.WaitingForChildren);
 
             var converted = _activityToContinuationConverter.Convert(activity, job);
             _persistenceStore.Store(converted.Jobs);
 
-            job = _jobMutator.Mutate<Scheduler>(job, continuation: converted.Continuation);            
+            job = _jobMutator.Mutate<Scheduler>(job, continuation: converted.Continuation);
             _router.Route(job);
-                
-            return job.Id;
         }
     }
 }

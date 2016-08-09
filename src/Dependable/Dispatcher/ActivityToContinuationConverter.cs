@@ -72,6 +72,12 @@ namespace Dependable.Dispatcher
             continuation.OnAllFailed = onFailed.Continuation;
             jobs.AddRange(onFailed.Jobs);
 
+            var onCancel = ConvertCore(singleActivity.OnCancel, parent, inheritedExceptionFilters);
+            if (onCancel.Continuation != null) 
+                onCancel.Continuation.CompensateForCancellation = true;
+            continuation.OnCancelled = onCancel.Continuation;
+            jobs.AddRange(onCancel.Jobs);
+
             return new ConvertedActivity(continuation, jobs.AsEnumerable());
         }
 
@@ -112,6 +118,12 @@ namespace Dependable.Dispatcher
             continuation.OnAllFailed = onAllFailed.Continuation;
             jobs = jobs.Concat(onAllFailed.Jobs);
 
+            var onCancelled = ConvertCore(activityGroup.OnCancel, parent, effectiveExceptionFilters);
+            if (onCancelled.Continuation != null)
+                onCancelled.Continuation.CompensateForCancellation = true;
+            continuation.OnCancelled = onCancelled.Continuation;
+            jobs = jobs.Concat(onCancelled.Jobs);
+            
             return new ConvertedActivity(continuation, jobs);
         }
     }

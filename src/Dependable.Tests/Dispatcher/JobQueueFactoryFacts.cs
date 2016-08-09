@@ -23,6 +23,8 @@ namespace Dependable.Tests.Dispatcher
         [InlineData(JobStatus.Poisoned, false)]
         [InlineData(JobStatus.ReadyToComplete, true)]
         [InlineData(JobStatus.Completed, false)]
+        [InlineData(JobStatus.Cancelled, false)]
+        [InlineData(JobStatus.CancellationInitiated, false)]
         public async Task ShouldOnlyRecoverJobsInRecoverableState(JobStatus status, bool recoverable)
         {
             Dependable.Job job = _world.NewJob.In(status);

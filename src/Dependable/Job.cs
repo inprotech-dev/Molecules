@@ -74,7 +74,7 @@ namespace Dependable
 
         public IDictionary<string, object> Properties { get; private set; }
 
-        public ExceptionFilter[] ExceptionFilters { get; private set; }   
+        public ExceptionFilter[] ExceptionFilters { get; private set; }
 
         public override string ToString()
         {
