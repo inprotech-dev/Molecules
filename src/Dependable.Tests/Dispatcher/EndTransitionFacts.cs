@@ -50,7 +50,6 @@ namespace Dependable.Tests.Dispatcher
             [Theory]
             [InlineData(JobStatus.Completed, JobStatus.ReadyToComplete)]
             [InlineData(JobStatus.Poisoned, JobStatus.ReadyToComplete)]
-            [InlineData(JobStatus.Cancelled, JobStatus.CancellationInitiated)]
             public void ParentShouldGoToIntermediaryStatusBeforeEndStatus(JobStatus status, JobStatus expecedStatus)
             {
                 Job root = _world.NewJob.In(JobStatus.WaitingForChildren);
@@ -151,7 +150,7 @@ namespace Dependable.Tests.Dispatcher
     {
         public static EndTransition NewEndTransition(this World world)
         {
-            return new EndTransition(world.PersistenceStore, world.JobMutator, world.ContinuationDispatcher);
+            return new EndTransition(world.PersistenceStore, world.JobMutator, world.ContinuationDispatcher, world.JobRootValidator);
         }
     }
 }

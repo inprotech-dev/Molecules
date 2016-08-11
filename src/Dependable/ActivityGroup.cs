@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Dependable.Utilities;
 
 namespace Dependable
 {
@@ -19,8 +20,10 @@ namespace Dependable
 
         public Activity OnAnyFailed { get; private set; }
 
-        public bool IsParallel { get; private set; }
+        public Activity OnCancel { get; private set; }
 
+        public bool IsParallel { get; private set; }
+        
         public ActivityGroup AnyFailed(Activity next)
         {
             if (next == null) throw new ArgumentNullException("next");
@@ -33,6 +36,14 @@ namespace Dependable
             if (next == null) throw new ArgumentNullException("next");
 
             OnAllFailed = next;
+            return this;
+        }
+
+        public ActivityGroup Cancelled(SingleActivity next)
+        {
+            if (next == null) throw new ArgumentNullException("next");
+
+            OnCancel = next;
             return this;
         }
     }

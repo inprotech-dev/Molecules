@@ -12,6 +12,7 @@
         ReadyToPoison,
         Poisoned,
         CancellationInitiated,
+        Cancelling,
         Cancelled
     }
 }

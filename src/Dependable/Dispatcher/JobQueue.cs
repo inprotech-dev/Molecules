@@ -139,7 +139,7 @@ namespace Dependable.Dispatcher
                 if (_suspendedCount != 0)
                     return null;
 
-                //Cancel the old reader first.
+                //Cancelled the old reader first.
                 //This will gracefully handle the situation where Read is called multiple times
                 //without awaiting for the read to complete.
                 if (_reader != null)

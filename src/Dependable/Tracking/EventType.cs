@@ -11,6 +11,7 @@ namespace Dependable.Tracking
         JobSuspended = 8,
         JobAbandoned = 16,
         Activity = 32,
-        TimerActivity = 64
+        TimerActivity = 64,
+        JobCancelled = 128
     }
 }

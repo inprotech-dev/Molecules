@@ -28,7 +28,7 @@ namespace Dependable.Dispatcher
             JobStatus.Completed
         };
 
-        static readonly JobStatus[] RunnableStatuses = {JobStatus.Ready, JobStatus.Failed, JobStatus.Running};
+        static readonly JobStatus[] RunnableStatuses = {JobStatus.Ready, JobStatus.Failed, JobStatus.Running, JobStatus.Cancelling};
 
         static readonly JobStatus[] FallibleStatuses = {JobStatus.Ready, JobStatus.Running, JobStatus.Failed};
 
@@ -54,7 +54,7 @@ namespace Dependable.Dispatcher
             if (failedTransition == null) throw new ArgumentNullException("failedTransition");
             if (endTransition == null) throw new ArgumentNullException("endTransition");
             if (waitingForChildrenTransition == null) throw new ArgumentNullException("waitingForChildrenTransition");
-            if (jobMutator == null) throw new ArgumentNullException("JobMutator");
+            if (jobMutator == null) throw new ArgumentNullException("jobMutator");
 
             _runningTransition = runningTransition;
             _failedTransition = failedTransition;

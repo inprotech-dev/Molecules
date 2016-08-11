@@ -55,6 +55,7 @@
     <Compile Include="Dispatcher\ContinuationExtensions.cs" />
     <Compile Include="Dispatcher\JobMutator.cs" />
     <Compile Include="Dispatcher\ContinuationLiveness.cs" />
+    <Compile Include="Dispatcher\JobRootValidator.cs" />
     <Compile Include="Dispatcher\QueueConfiguration.cs" />
     <Compile Include="Dispatcher\RunningTransition.cs" />
     <Compile Include="Dispatcher\WaitForChildrenTransition.cs" />

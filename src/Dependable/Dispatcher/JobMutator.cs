@@ -34,9 +34,6 @@ namespace Dependable.Dispatcher
             Continuation continuation = null,
             bool? suspended = null)
         {
-            if (job.Status == JobStatus.Cancelled && status != null)
-                status = null;
-
             var newJob = new Job(job.Id,
                 job.Type,
                 job.Method,

@@ -82,7 +82,7 @@ namespace Dependable
         public void Stop(Guid guid)
         {
             var job = _persistenceStore.Load(guid);
-            if(job.ParentId == null)
+            if(job.ParentId == null && job.Status != JobStatus.Completed)
                 _jobMutator.Mutate<Scheduler>(job, JobStatus.CancellationInitiated);
         }
 

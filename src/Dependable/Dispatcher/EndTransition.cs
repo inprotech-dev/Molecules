@@ -15,6 +15,7 @@ namespace Dependable.Dispatcher
         readonly IPersistenceStore _jobRepository;
         readonly IJobMutator _jobMutator;
         readonly IContinuationDispatcher _continuationDispatcher;
+        private readonly IJobRootValidator _jobRootValidator;
 
         static readonly Dictionary<JobStatus, JobStatus> PendingEndStatus =
             new Dictionary<JobStatus, JobStatus>
@@ -29,15 +30,18 @@ namespace Dependable.Dispatcher
 
         public EndTransition(IPersistenceStore jobRepository,
             IJobMutator jobMutator,
-            IContinuationDispatcher continuationDispatcher)
+            IContinuationDispatcher continuationDispatcher, 
+            IJobRootValidator jobRootValidator)
         {
             if (jobRepository == null) throw new ArgumentNullException("jobRepository");
             if (jobMutator == null) throw new ArgumentNullException("jobMutator");
             if (continuationDispatcher == null) throw new ArgumentNullException("continuationDispatcher");
+            if (jobRootValidator == null) throw new ArgumentNullException("jobRootValidator");
 
             _jobRepository = jobRepository;
             _jobMutator = jobMutator;
             _continuationDispatcher = continuationDispatcher;
+            _jobRootValidator = jobRootValidator;
         }
 
         public Job Transit(Job job, JobStatus endStatus)
@@ -61,6 +65,7 @@ namespace Dependable.Dispatcher
                 return _jobMutator.Mutate<EndTransition>(job, status: endStatus);
             }
             
+            
             job = _jobMutator.Mutate<EndTransition>(job, PendingEndStatus[endStatus]);
 
             /*
@@ -69,7 +74,7 @@ namespace Dependable.Dispatcher
              */
 // ReSharper disable once PossibleInvalidOperationException
             var parent = _jobRepository.Load(job.ParentId.Value);
-            var @await = parent.Continuation.Find(job);
+            var @await = parent.Continuation.Find(job, _jobRootValidator.IsValid(parent.RootId));
             @await.Status = endStatus;
 
             /*
@@ -82,7 +87,7 @@ namespace Dependable.Dispatcher
             var pendingAwaits = _continuationDispatcher.Dispatch(parent);
 
             if (!pendingAwaits.Any())
-                EndTree(parent, JobStatus.Completed);
+                EndTree(parent, endStatus == JobStatus.Cancelled? JobStatus.Cancelled  : JobStatus.Completed );
             
             return _jobMutator.Mutate<EndTransition>(job, endStatus);
         }

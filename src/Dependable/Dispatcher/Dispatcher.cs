@@ -27,6 +27,7 @@ namespace Dependable.Dispatcher
         readonly IStatusChanger _statusChanger;
         readonly IContinuationLiveness _continuationLiveness;
         readonly IExceptionFilterDispatcher _exceptionFilterDispatcher;
+        private readonly IJobRootValidator _jobRootValidator;
 
         public Dispatcher(IDependencyResolver dependencyResolver,
             IJobCoordinator jobCoordinator, IErrorHandlingPolicy errorHandlingPolicy,
@@ -35,7 +36,8 @@ namespace Dependable.Dispatcher
             IRecoverableAction recoverableAction,
             IStatusChanger statusChanger,
             IContinuationLiveness continuationLiveness,
-            IExceptionFilterDispatcher exceptionFilterDispatcher)
+            IExceptionFilterDispatcher exceptionFilterDispatcher,
+            IJobRootValidator jobRootValidator)
         {
             if (jobCoordinator == null) throw new ArgumentNullException("jobCoordinator");
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
@@ -46,6 +48,7 @@ namespace Dependable.Dispatcher
             if (statusChanger == null) throw new ArgumentNullException("statusChanger");
             if (continuationLiveness == null) throw new ArgumentNullException("continuationLiveness");
             if (exceptionFilterDispatcher == null) throw new ArgumentNullException("exceptionFilterDispatcher");
+            if (jobRootValidator == null) throw new ArgumentNullException("jobRootValidator");
 
             _jobCoordinator = jobCoordinator;
             _dependencyResolver = dependencyResolver;
@@ -56,6 +59,7 @@ namespace Dependable.Dispatcher
             _statusChanger = statusChanger;
             _continuationLiveness = continuationLiveness;
             _exceptionFilterDispatcher = exceptionFilterDispatcher;
+            _jobRootValidator = jobRootValidator;
         }
 
         public async Task Dispatch(Job job, ActivityConfiguration configuration)
@@ -79,6 +83,9 @@ namespace Dependable.Dispatcher
                 case JobStatus.ReadyToPoison:
                     _jobCoordinator.Run(job, () => _statusChanger.Change(job, JobStatus.Poisoned));
                     break;
+                case JobStatus.Cancelling:
+                    await Run(job, true);
+                    break;
                 default:
                     _eventStream.Publish<Dispatcher>(EventType.JobAbandoned,
                         EventProperty.Named("Reason", "UnexpectedStatus"), EventProperty.JobSnapshot(job));
@@ -86,25 +93,26 @@ namespace Dependable.Dispatcher
             }
         }
 
-        async Task Run(Job job)
+        async Task Run(Job job, bool force = false)
         {
             using (var scope = _dependencyResolver.BeginScope())
             {
-                var context = new JobContext(job);                    
+                var context = new JobContext(job);
                 JobResult result = null;
 
                 try
                 {
-                    if (!_continuationLiveness.IsValid(job.RootId))
+                    if (!force && !_jobRootValidator.IsValid(job.RootId))
                     {
                         _statusChanger.Change(job, JobStatus.Cancelled);
+                        _eventStream.Publish<JobCoordinator>(EventType.JobCancelled, EventProperty.Named("Reason", "Cancelled"), EventProperty.JobSnapshot(job));
                         return;
                     }
 
                     job = _statusChanger.Change(job, JobStatus.Running);
 
                     var instance = scope.GetService(job.Type);
-                    
+
                     result = await _methodBinder.Run(instance, job);
 
                     if (result == null)
@@ -117,10 +125,12 @@ namespace Dependable.Dispatcher
                 {
                     if (e.IsFatal())
                         throw;
-
-                    _exceptionFilterDispatcher.Dispatch(job, e, context, scope);
-                    _eventStream.Publish<Dispatcher>(e, EventProperty.JobSnapshot(job));
-                    _errorHandlingPolicy.RetryOrPoison(job, e, context);
+                    if (!force)
+                    {
+                        _exceptionFilterDispatcher.Dispatch(job, e, context, scope);
+                        _eventStream.Publish<Dispatcher>(e, EventProperty.JobSnapshot(job));
+                        _errorHandlingPolicy.RetryOrPoison(job, e, context);
+                    }
                 }
 
                 if (result != null)
@@ -135,7 +145,7 @@ namespace Dependable.Dispatcher
             else
             {
                 _recoverableAction.Run(() =>
-                    _statusChanger.Change(job, JobStatus.WaitingForChildren, activity: result.Activity));                
+                    _statusChanger.Change(job, JobStatus.WaitingForChildren, activity: result.Activity));
             }
         }
     }

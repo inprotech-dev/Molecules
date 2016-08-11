@@ -1,4 +1,5 @@
 using System;
+using Dependable.Utilities;
 
 namespace Dependable
 {
@@ -23,10 +24,20 @@ namespace Dependable
 
         public Activity OnFailed { get; private set; }
 
+        public Activity OnCancel { get; private set; }
+
         public SingleActivity Failed(Activity next)
         {
             if (next == null) throw new ArgumentNullException("next");
             OnFailed = next;
+            return this;
+        }
+
+        public SingleActivity Cancelled(SingleActivity next)
+        {
+            if (next == null) throw new ArgumentNullException("next");
+
+            OnCancel = next;
             return this;
         }
     }

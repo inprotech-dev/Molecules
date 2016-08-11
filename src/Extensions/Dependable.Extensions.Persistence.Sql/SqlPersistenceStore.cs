@@ -213,9 +213,15 @@ namespace Dependable.Extensions.Persistence.Sql
 
         void Update(Job job)
         {
-            _connection.Execute(
-                "update DependableJobs set Status = @Status, DispatchCount = @DispatchCount, " +
-                "RetryOn = @RetryOn, Continuation = @Continuation, Suspended = @Suspended where Id = @Id",
+            var updateQuery = "update DependableJobs set Status = @Status, DispatchCount = @DispatchCount, " +
+                                 "RetryOn = @RetryOn, Continuation = @Continuation, Suspended = @Suspended where Id = @Id " ;
+
+            if (job.Status == JobStatus.CancellationInitiated)
+            {
+                updateQuery += " and status <> 'Completed'";
+            }
+
+            _connection.Execute(updateQuery,
                 new
                 {
                     job.Id,
