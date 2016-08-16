@@ -13,7 +13,7 @@ namespace Dependable
     {
         Task Start();
 
-        void Stop(Guid guid);
+        bool Stop(Guid guid);
 
         void Schedule(Activity activity, Guid? nominatedRootId = null);
     }
@@ -80,15 +80,17 @@ namespace Dependable
             await Task.WhenAny(tasks).FailFastOnException();
         }
 
-        public void Stop(Guid guid)
+        public bool Stop(Guid guid)
         {
             var job = _persistenceStore.Load(guid);
 
-            if (job == null)
-                return;
+            if (job == null || job.ParentId != null || job.Status == JobStatus.Completed)
+                return false;
+            
+            _jobMutator.Mutate<Scheduler>(job, JobStatus.CancellationInitiated);
+            job = _persistenceStore.Load(guid);
 
-            if (job.ParentId == null && job.Status != JobStatus.Completed)
-                _jobMutator.Mutate<Scheduler>(job, JobStatus.CancellationInitiated);
+            return job.Status == JobStatus.CancellationInitiated || job.Status == JobStatus.Cancelled;
         }
 
         public void Schedule(Activity activity, Guid? nominatedRootId = null)

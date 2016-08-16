@@ -25,14 +25,7 @@ namespace Dependable.Dispatcher
                     string.Format("Type {0} does not have a matching Run method.", type.FullName));
             }
 
-            var requiresCancellationToken =
-                runMethod.GetCustomAttributes(typeof (RequiresCancellationTokenAttribute), false)
-                    .Cast<RequiresCancellationTokenAttribute>()
-                    .SingleOrDefault();
-
-            var result = requiresCancellationToken == null
-                ? runMethod.Invoke(instance, job.Arguments)
-                : runMethod.Invoke(instance, ExpandArgsWithCancellationToken(job));
+            var result = runMethod.Invoke(instance, job.Arguments);
 
             if (result == null)
                 return null;
@@ -44,26 +37,6 @@ namespace Dependable.Dispatcher
             }
 
             return new JobResult(await (Task<Activity>) result);
-        }
-
-        static object[] ExpandArgsWithCancellationToken(Job job)
-        {
-            return (new List<object>(job.Arguments ?? new object[0]) {new CancellationToken(job.RootId)}).ToArray();
-        }
-    }
-
-    [AttributeUsage(AttributeTargets.Method, Inherited = false)]
-    public class RequiresCancellationTokenAttribute : Attribute
-    {
-    }
-
-    public class CancellationToken
-    {
-        public Guid Value { get; private set; }
-
-        public CancellationToken(Guid token)
-        {
-            Value = token;
         }
     }
 }

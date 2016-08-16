@@ -45,8 +45,10 @@ namespace Dependable.Dispatcher
 
             _persistenceStore.Store(converted.Jobs);
 
-            job = _jobMutator.Mutate<WaitingForChildrenTransition>(job, status: JobStatus.WaitingForChildren,
-                continuation: converted.Continuation);
+            if(job.Status == JobStatus.CancellationInitiated || job.Status == JobStatus.Cancelling)
+                job = _jobMutator.Mutate<WaitingForChildrenTransition>(job, continuation: converted.Continuation);
+            else
+                job = _jobMutator.Mutate<WaitingForChildrenTransition>(job, status: JobStatus.WaitingForChildren, continuation: converted.Continuation);
 
             _recoverableAction.Run(() => _continuationDispatcher.Dispatch(job));
 
