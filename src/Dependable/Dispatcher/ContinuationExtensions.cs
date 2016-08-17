@@ -24,24 +24,11 @@ namespace Dependable.Dispatcher
                     return failedHandler;
                 }
 
-                if (item.Status == JobStatus.Cancelled || item.Status == JobStatus.CancellationInitiated ||
-                    item.Status == JobStatus.Cancelling)
+                if (item.Status == JobStatus.Completed || item.Status == JobStatus.Cancelled || item.Status == JobStatus.CancellationInitiated)
                 {
-                    var cancelledHandler = item.OnCancelled.PendingContinuations(isValid).ToArray();
-                    if (cancelledHandler.Any())
-                        return cancelledHandler;
-
-                    return item.Next.PendingContinuations(isValid);
-                }
-
-                if (item.Status == JobStatus.Completed)
-                {
-                    if (isValid)
-                        return item.Next.PendingContinuations();
-
-                    var pendingCancellations = PendingCancellations(item).ToArray();
-                    if (pendingCancellations.Any())
-                        return pendingCancellations;
+                    var pendingContinuations = item.Next.PendingContinuations(isValid).ToArray();
+                    if (pendingContinuations.Any())
+                        return pendingContinuations;
                 }
             }
             if (item.Type == ContinuationType.Parallel)
@@ -55,7 +42,7 @@ namespace Dependable.Dispatcher
 
             if (item.Type == ContinuationType.Sequence)
             {
-                foreach (var child in item.Children.Where(_ => _.Status != JobStatus.Cancelled))
+                foreach (var child in item.Children)
                 {
                     var children = child.PendingContinuations(isValid).ToArray();
                     if (children.Any()) return children;
@@ -77,8 +64,12 @@ namespace Dependable.Dispatcher
             if (resultArray.Any())
                 return resultArray;
 
-            if (item.CanContinue() && isValid)
-                return item.Next.PendingContinuations();
+            if (item.CanContinue())
+            {
+                var nextContinuations = item.Next.PendingContinuations(isValid).ToArray();
+                if (nextContinuations.Any())
+                    return nextContinuations;
+            }
 
             if (!isValid)
             {
@@ -99,9 +90,11 @@ namespace Dependable.Dispatcher
                 if (cancelledHandlers.Any())
                     return cancelledHandlers;
 
-                return item.Children.Where(c => c.IsCancelled())
-                    .SelectMany(_ => _.PendingCancellations())
-                    .ToArray();
+                foreach (var child in item.Children.Where(_ => _.IsCancelled()))
+                {
+                    var children = child.PendingCancellations().ToArray();
+                    if (children.Any()) return children;
+                }
             }
             return Enumerable.Empty<Continuation>();
         }

@@ -11,7 +11,7 @@ namespace Dependable.Tests
     {
         public static Queue<Mutation> Mutations(this IJobMutator jobMutator, Job job)
         {
-            if (jobMutator == null) throw new ArgumentNullException("JobMutator");
+            if (jobMutator == null) throw new ArgumentNullException("jobMutator");
             if (job == null) throw new ArgumentNullException("job");
 
             var calls = from call in jobMutator.ReceivedCalls()

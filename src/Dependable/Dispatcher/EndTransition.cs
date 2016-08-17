@@ -56,8 +56,7 @@ namespace Dependable.Dispatcher
                 throw new ArgumentOutOfRangeException("endStatus", endStatus, "Not a valid end status.");
 
             return job.ParentId == null
-                ? _jobMutator.Mutate<EndTransition>(job,
-                    status: job.Status == JobStatus.CancellationInitiated ? JobStatus.Cancelled : endStatus)
+                ? _jobMutator.Mutate<EndTransition>(job, status: job.Status == JobStatus.CancellationInitiated ? JobStatus.Cancelled : endStatus)
                 : EndTree(job, endStatus);
         }
 
@@ -93,7 +92,10 @@ namespace Dependable.Dispatcher
             var pendingAwaits = _continuationDispatcher.Dispatch(parent);
 
             if (!pendingAwaits.Any())
-                EndTree(parent, endStatus == JobStatus.Cancelled ? JobStatus.Cancelled : JobStatus.Completed);
+            {
+                var endStatusForParent = parent.Continuation.IsCancelled() ? JobStatus.Cancelled : JobStatus.Completed;
+                EndTree(parent, endStatusForParent);
+            }
 
             return _jobMutator.Mutate<EndTransition>(job, endStatus);
         }
