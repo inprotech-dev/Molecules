@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
@@ -14,6 +15,7 @@ namespace TestHost
     class Program
     {
         static IScheduler _scheduler;
+        static Guid _stopToken;
 
         static void Main()
         {
@@ -84,15 +86,12 @@ namespace TestHost
                     Console.WriteLine("Press any key to start the schedule");
                     Console.ReadLine();
 
-                    var stopToken = Guid.NewGuid();
-
-                    _scheduler.Schedule(
-                        Activity.Run<DueSchedule>(a => a.Run()).Cancelled(Activity.Run<CancelSchedule>(d => d.Run())),
-                        stopToken);
+                    _stopToken = Guid.NewGuid();
+                    _scheduler.Schedule(Activity.Run<DueSchedule>(d=>d.ExecuteSchedule()).Cancelled(Activity.Run<DueSchedule>(d=>d.CancelExecute())), _stopToken);
 
                     if (ConsoleKey.Y == Console.ReadKey().Key)
                     {
-                        _scheduler.Stop(stopToken);
+                        _scheduler.Stop(_stopToken);
                     }
                     break;
             }
@@ -151,16 +150,32 @@ namespace TestHost
 
     public class DueSchedule
     {
+        public Task<Activity> ExecuteSchedule()
+        {
+            Console.WriteLine("DueSchedule- ExecuteSchedule");
+            var arrayList = new List<Activity>();
+            for (var i = 0; i < 3; i++)
+            {
+                arrayList.Add(Activity.Run<DueSchedule>(d => d.Run()).Cancelled(Activity.Run<CancelSchedule>(d => d.Run())));
+            }
+
+            return Task.FromResult<Activity>(Activity.Parallel(arrayList.ToArray()));
+        }
+    
         // ReSharper disable once CSharpWarnings::CS1998
         public async Task<Activity> Run()
         {
-            Console.WriteLine("DueSchedule");
+            Console.WriteLine("DueSchedule- Run");
             Thread.Sleep(5000);
-
+            
             return
-                Activity.Sequence(Activity.Run<ApplicationList>(a => a.Download()),
-                    Activity.Run<ApplicationList>(a => a.DownloadEachItem()));
+                Activity.Sequence(Activity.Run<ApplicationList>(a => a.Download()), Activity.Run<ApplicationList>(a => a.DownloadEachItem()));
             //.Cancelled(Activity.Run<CancelApplicationList>(g => g.Run()));
+        }
+
+        public async Task CancelExecute()
+        {
+            Console.WriteLine("DueSchedule- CancelExecute");
         }
     }
 
@@ -197,7 +212,7 @@ namespace TestHost
         {
             Console.WriteLine("ApplicationList - Download Each Item");
             return
-                Activity.Parallel(
+                Activity.Sequence(
                     Activity.Run<ApplicationDetails>(a => a.Download())
                         .Cancelled(Activity.Run<ApplicationDetails.CancelDownload>(notify => notify.Run())),
                     Activity.Run<ApplicationDetails>(a => a.Convert()),

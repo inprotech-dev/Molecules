@@ -74,6 +74,9 @@ namespace Dependable.Dispatcher
                 case JobStatus.Failed:
                     await Run(job);
                     break;
+                case JobStatus.Cancelling:
+                    await Run(job, true);
+                    break;
                 case JobStatus.WaitingForChildren:
                     _jobCoordinator.Run(job, () => _continuationLiveness.Verify(job.Id));
                     break;
@@ -83,8 +86,8 @@ namespace Dependable.Dispatcher
                 case JobStatus.ReadyToPoison:
                     _jobCoordinator.Run(job, () => _statusChanger.Change(job, JobStatus.Poisoned));
                     break;
-                case JobStatus.Cancelling:
-                    await Run(job, true);
+                case JobStatus.CancellationInitiated:
+                    _jobCoordinator.Run(job, () => _statusChanger.Change(job, JobStatus.Cancelled));
                     break;
                 default:
                     _eventStream.Publish<Dispatcher>(EventType.JobAbandoned,

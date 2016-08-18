@@ -11,7 +11,7 @@ namespace Dependable.Dispatcher
 
             if (item.Type == ContinuationType.Single)
             {
-                if (item.Status == JobStatus.Created || item.Status == JobStatus.Ready)
+                if (item.Status == JobStatus.Created || item.Status == JobStatus.Ready || item.Status == JobStatus.Cancelling)
                     return new[] {item};
 
                 if (item.Status == JobStatus.Poisoned)
@@ -33,10 +33,9 @@ namespace Dependable.Dispatcher
             }
             if (item.Type == ContinuationType.Parallel)
             {
-                var children =
-                    item.Children.Where(_ => _.Status != JobStatus.Cancelled)
-                        .SelectMany(a => a.PendingContinuations(isValid))
-                        .ToArray();
+                var children = item.Children
+                                    .SelectMany(a => a.PendingContinuations(isValid))
+                                    .ToArray();
                 if (children.Any()) return children;
             }
 
@@ -124,7 +123,7 @@ namespace Dependable.Dispatcher
 
             // If this item is already completed we can continue if there's no next item or
             // next item can also continue.
-            if (item.Status == JobStatus.Completed)
+            if (item.Status == JobStatus.Completed || item.Status == JobStatus.Cancelled)
             {
                 return !isFailureHandler || item.Next == null || item.Next.CanContinue();
             }

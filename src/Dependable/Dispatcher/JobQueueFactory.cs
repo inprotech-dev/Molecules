@@ -31,7 +31,7 @@ namespace Dependable.Dispatcher
             if (configuration == null) throw new ArgumentNullException("configuration");
             if (eventStream == null) throw new ArgumentNullException("eventStream");
             if (recoverableAction == null) throw new ArgumentNullException("recoverableAction");
-            if (jobMutator == null) throw new ArgumentNullException("JobMutator");
+            if (jobMutator == null) throw new ArgumentNullException("jobMutator");
 
             _persistenceStore = persistenceStore;
             _configuration = configuration;
@@ -43,20 +43,27 @@ namespace Dependable.Dispatcher
         public QueueConfiguration Create()
         {
             var readyItems = _persistenceStore.LoadBy(JobStatus.Ready).ToArray();
+            var cancellingItems = _persistenceStore.LoadBy(JobStatus.Cancelling).ToArray();
+
             var runningItems = _persistenceStore.LoadBy(JobStatus.Running).ToArray();
             var failedItems = _persistenceStore.LoadBy(JobStatus.Failed).ToArray();
             var waitingForChildren = _persistenceStore.LoadBy(JobStatus.WaitingForChildren).ToArray();
 
-            var partiallyCompletedItems =
-                _persistenceStore.LoadBy(JobStatus.ReadyToComplete)
-                    .Concat(_persistenceStore.LoadBy(JobStatus.ReadyToPoison)).ToArray();
+            //Exclude job root while picking the runnable items
+            var cancellationInitiatedItems = _persistenceStore.LoadBy(JobStatus.CancellationInitiated)
+                                                              .Where(_=>_.ParentId != null);
 
-            var all =
-                partiallyCompletedItems.Concat(readyItems)
-                    .Concat(failedItems)
-                    .Concat(waitingForChildren)
-                    .Concat(runningItems)
-                    .ToArray();
+            var partiallyCompletedItems =  _persistenceStore.LoadBy(JobStatus.ReadyToComplete)
+                                                            .Concat(_persistenceStore.LoadBy(JobStatus.ReadyToPoison))
+                                                            .Concat(cancellationInitiatedItems)
+                                                            .ToArray();
+
+            var all = partiallyCompletedItems.Concat(readyItems)
+                                             .Concat(cancellingItems)
+                                             .Concat(failedItems)
+                                             .Concat(waitingForChildren)
+                                             .Concat(runningItems)
+                                             .ToArray();
 
             var totalSuspendedItemsInSpecificQueues = 0;
             var activitySpecificQueues = new Dictionary<Type, IJobQueue>();

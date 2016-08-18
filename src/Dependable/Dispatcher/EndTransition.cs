@@ -66,7 +66,7 @@ namespace Dependable.Dispatcher
             if (job.ParentId == null)
             {
                 //If Cancellation is Initiated - Endstate is Cancelled. Otherwise its Completed
-                endStatus = job.Status == JobStatus.CancellationInitiated ? JobStatus.Cancelled : JobStatus.Completed;
+                endStatus = job.Continuation.IsCancelled() ? JobStatus.Cancelled : JobStatus.Completed;
                 return _jobMutator.Mutate<EndTransition>(job, status: endStatus);
             }
 

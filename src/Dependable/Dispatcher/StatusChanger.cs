@@ -83,9 +83,10 @@ namespace Dependable.Dispatcher
                 case JobStatus.Poisoned:
                     return CheckStatusAndInvoke(job, PoisonableStatus,
                         () => _endTransition.Transit(job, JobStatus.Poisoned));
+                case JobStatus.Cancelling:
+                    return _jobMutator.Mutate<StatusChanger>(job, status: newStatus);
                 case JobStatus.Cancelled:
-                    return CheckStatusAndInvoke(job, new[]{JobStatus.CancellationInitiated, JobStatus.Ready, JobStatus.Failed},
-                        () => _endTransition.Transit(job, JobStatus.Cancelled));
+                    return _endTransition.Transit(job, JobStatus.Cancelled);
             }
 
             return job;

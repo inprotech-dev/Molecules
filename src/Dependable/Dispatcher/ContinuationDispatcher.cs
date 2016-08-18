@@ -71,7 +71,7 @@ namespace Dependable.Dispatcher
             var schedulableJobs = (
                 from @await in continuations
                 let j = _persistenceStore.Load(@await.Id)
-                where j.Status == JobStatus.Created
+                where j.Status == JobStatus.Created 
                 select j)
                 .ToArray();
 

@@ -75,18 +75,6 @@ namespace Dependable.Tests.Dispatcher
                 _world.JobMutator.Mutations(root).Verify(JobStatus.Completed);
             }
 
-            [Fact]      
-            public void RootShouldNotCancelIfCancellationNotInitiated()
-            {
-                var status = JobStatus.Cancelled;
-                Job root = _world.NewJob.In(JobStatus.WaitingForChildren);
-                var child = _world.NewJob.In(JobStatus.Running).AsChildOf(ref root, JobStatus.Ready);
-
-                _world.NewEndTransition().Transit(child, status);
-
-                _world.JobMutator.Mutations(root).Verify(JobStatus.Completed);
-            }
-
             [Fact]
             public void RootShouldCancelIfCancellationInitiated()
             {

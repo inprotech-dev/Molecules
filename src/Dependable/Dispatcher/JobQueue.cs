@@ -53,7 +53,7 @@ namespace Dependable.Dispatcher
             if (persistenceStore == null) throw new ArgumentNullException("persistenceStore");
             if (eventStream == null) throw new ArgumentNullException("eventStream");
             if (recoverableAction == null) throw new ArgumentNullException("recoverableAction");
-            if (jobMutator == null) throw new ArgumentNullException("JobMutator");
+            if (jobMutator == null) throw new ArgumentNullException("jobMutator");
 
             Configuration = configuration;
 

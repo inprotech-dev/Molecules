@@ -156,14 +156,6 @@ namespace Dependable.Tests.Dispatcher
         [InlineData(JobStatus.CancellationInitiated)]
         [InlineData(JobStatus.Ready)]
         [InlineData(JobStatus.Failed)]
-        public void TransitsToCancelledFrom(JobStatus status)
-        {
-            var job = _world.NewJob.In(status);
-            _changeStatus().Change(job, JobStatus.Cancelled);
-            _world.EndTransition.Received(1).Transit(job, JobStatus.Cancelled );
-        }
-
-        [Theory]
         [InlineData(JobStatus.ReadyToComplete)]
         [InlineData(JobStatus.Completed)]
         [InlineData(JobStatus.ReadyToPoison)]
@@ -172,11 +164,11 @@ namespace Dependable.Tests.Dispatcher
         [InlineData(JobStatus.Running)]
         [InlineData(JobStatus.WaitingForChildren)]
         [InlineData(JobStatus.Created)]
-        public void DoesNotTransitToCancelledFrom(JobStatus status)
+        public void TransitsToCancelledFrom(JobStatus status)
         {
             var job = _world.NewJob.In(status);
             _changeStatus().Change(job, JobStatus.Cancelled);
-            _world.EndTransition.DidNotReceive().Transit(job, JobStatus.Cancelled);
+            _world.EndTransition.Received(1).Transit(job, JobStatus.Cancelled );
         }
     }
 }
