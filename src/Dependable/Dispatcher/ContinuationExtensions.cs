@@ -55,7 +55,7 @@ namespace Dependable.Dispatcher
             var failedChildren = item.Children.Where(c => !c.CanContinue()).ToArray();
 
             if (failedChildren.Any()) anyFailureHandlers = item.OnAnyFailed.PendingContinuations(isValid);
-            if (failedChildren.Length == item.Children.Count())
+            if ( item.Children.Any() && failedChildren.Length == item.Children.Count())
                 allFailureHandlers = item.OnAllFailed.PendingContinuations(isValid);
 
             var resultArray = anyFailureHandlers.Concat(allFailureHandlers).ToArray();
