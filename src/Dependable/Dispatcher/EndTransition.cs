@@ -32,6 +32,13 @@ namespace Dependable.Dispatcher
                 JobStatus.Cancelled
             };
 
+        private static readonly IEnumerable<JobStatus> CancelStatuses =
+            new[]
+            {
+                JobStatus.CancellationInitiated, 
+                JobStatus.Cancelled
+            };
+
         public EndTransition(IPersistenceStore jobRepository,
             IJobMutator jobMutator,
             IContinuationDispatcher continuationDispatcher,
@@ -56,7 +63,7 @@ namespace Dependable.Dispatcher
                 throw new ArgumentOutOfRangeException("endStatus", endStatus, "Not a valid end status.");
 
             return job.ParentId == null
-                ? _jobMutator.Mutate<EndTransition>(job, status: job.Status == JobStatus.CancellationInitiated ? JobStatus.Cancelled : endStatus)
+                ? _jobMutator.Mutate<EndTransition>(job, status: CancelStatuses.Contains(job.Status) ? JobStatus.Cancelled : endStatus)
                 : EndTree(job, endStatus);
         }
 
@@ -66,8 +73,10 @@ namespace Dependable.Dispatcher
             if (job.ParentId == null)
             {
                 //If Cancellation is Initiated - Endstate is Cancelled. Otherwise its Completed
-                endStatus = job.Continuation.IsCancelled() ? JobStatus.Cancelled : JobStatus.Completed;
-                return _jobMutator.Mutate<EndTransition>(job, status: endStatus);
+                endStatus = job.Continuation.IsCancelled() || CancelStatuses.Contains(job.Status)
+                    ? JobStatus.Cancelled
+                    : JobStatus.Completed;
+                return _jobMutator.Mutate<EndTransition>(job, endStatus);
             }
 
 
@@ -77,7 +86,7 @@ namespace Dependable.Dispatcher
              * First, load the parent, find the await record for this job and 
              * update its status to end status.
              */
-// ReSharper disable once PossibleInvalidOperationException
+            // ReSharper disable once PossibleInvalidOperationException
             var parent = _jobRepository.Load(job.ParentId.Value);
             var @await = parent.Continuation.Find(job, _jobRootValidator.IsValid(parent.RootId));
             @await.Status = endStatus;

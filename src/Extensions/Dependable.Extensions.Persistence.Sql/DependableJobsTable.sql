@@ -35,4 +35,14 @@ ELSE
 BEGIN
 	PRINT 'Updating the existing table.'	
 END
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='XIEDEPENDABLEJOBS' AND object_id = OBJECT_ID('DependableJobs'))
+BEGIN
+	PRINT 'Index does not exist. Creating a new one.'
+	CREATE NONCLUSTERED INDEX [XIEDEPENDABLEJOBS] ON [dbo].[DependableJobs]
+	(
+		[Status] ASC,
+		[InstanceName] ASC
+	)
+END
 COMMIT TRAN

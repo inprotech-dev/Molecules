@@ -43,6 +43,9 @@ namespace Dependable
             return new SingleActivity(typeof(T), methodCall.Name, methodCall.Arguments);
         }
 
+        //Use with caution: 
+        //Parallel activity tree could get stuck: since the parallel continuations race conditions are not handled gracefully   
+        //Although it will get unblocked while rehydrating and run further
         public static ActivityGroup Parallel(params Activity[] items)
         {
             if (items == null) throw new ArgumentNullException("items");
