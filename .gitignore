@@ -39,3 +39,4 @@ StandaloneInterfaces
 *.vsp
 *.orig
 *.nupkg
+.vs

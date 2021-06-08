@@ -1,7 +1,7 @@
 ﻿using System;
 using Dependable.Dispatcher;
 using NSubstitute;
-using Xunit.Extensions;
+using Xunit;
 
 namespace Dependable.Tests.Dispatcher
 {

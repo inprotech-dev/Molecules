@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Dependable.Dispatcher;
 using NSubstitute;
 using Xunit;
+#pragma warning disable CS4014
 
 namespace Dependable.Tests.Dispatcher
 {
@@ -29,14 +30,12 @@ namespace Dependable.Tests.Dispatcher
 
             var pump = _world.NewJobPump(queue);
 
-// ReSharper disable once CSharpWarnings::CS4014
             pump.Start();
 
             availableJob.SetResult(job);
 
             await dispatch.Task;
 
-// ReSharper disable once CSharpWarnings::CS4014
             _world.Dispatcher.Received(1).Dispatch(job, queue.Configuration);
         }
 
@@ -78,12 +77,11 @@ namespace Dependable.Tests.Dispatcher
                 _dispatchResults.Enqueue(new TaskCompletionSource<object>());
 
                 var pump = _world.NewJobPump(_queue);
-// ReSharper disable once CSharpWarnings::CS4014
+
                 pump.Start();
                 
                 await dispatchInvoked.Task;
 
-// ReSharper disable once CSharpWarnings::CS4014
                 _queue.Received(1).Read();
             }
 
@@ -101,7 +99,7 @@ namespace Dependable.Tests.Dispatcher
                 _dispatchInvocations.Enqueue(secondDispatchInvoked);
 
                 var pump = _world.NewJobPump(_queue);
-                // ReSharper disable once CSharpWarnings::CS4014
+                
                 pump.Start();
 
                 // Wait for first dispatch call to arrive in dispatcher
