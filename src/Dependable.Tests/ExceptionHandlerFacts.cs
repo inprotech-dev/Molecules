@@ -1,6 +1,5 @@
 ﻿using Dependable.Dispatcher;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Dependable.Tests
 {
@@ -9,19 +8,16 @@ namespace Dependable.Tests
         [Fact]
         public void CapturesConstantArguments()
         {
-// ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             var handler = ExceptionFilter.From<string>((c, s) => s.IndexOf('a'));
 
             Assert.Equal('a', handler.Arguments[0]);
         }
 
         [Fact]
-        public void CapturesLocalValiableReferences()
+        public void CapturesLocalVariableReferences()
         {
-// ReSharper disable once ConvertToConstant.Local
             var argument = 'a';
 
-// ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             var handler = ExceptionFilter.From<string>((c, s) => s.IndexOf(argument));
 
             Assert.Equal(argument, handler.Arguments[0]);
@@ -31,7 +27,6 @@ namespace Dependable.Tests
         [InlineData('a')]
         public void CapturesArgumentReference(char argument)
         {
-// ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             var handler = ExceptionFilter.From<string>((c, s) => s.IndexOf(argument));
 
             Assert.Equal(argument, handler.Arguments[0]);
@@ -42,7 +37,6 @@ namespace Dependable.Tests
         {
             var thisMethod = GetType().GetMethod("CapturesComplexPropertyReference");
 
-// ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             var handler = ExceptionFilter.From<string>((c, s) => s.StartsWith(thisMethod.Name));
 
             Assert.Equal(thisMethod.Name, handler.Arguments[0]);
@@ -59,7 +53,6 @@ namespace Dependable.Tests
         [Fact]
         public void CapturesMethodName()
         {
-// ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             var handler = ExceptionFilter.From<string>((c, s) => s.IndexOf('c'));
 
             Assert.Equal("IndexOf", handler.Method);
@@ -68,13 +61,12 @@ namespace Dependable.Tests
         [Fact]
         public void CapturesType()
         {
-// ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             var handler = ExceptionFilter.From<string>((c, s) => s.IndexOf('c'));
 
             Assert.Equal(typeof (string), handler.Type);
         }
 
-        public void Log(ExceptionContext context)
+        void Log(ExceptionContext context)
         {            
         }
     }

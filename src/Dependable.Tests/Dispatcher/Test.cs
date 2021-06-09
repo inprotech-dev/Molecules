@@ -4,14 +4,14 @@ namespace Dependable.Tests.Dispatcher
 {
     public class Test
     {
-        public async Task<Activity> Run()
+        public Task<Activity> Run()
         {
-            return null;
+            return Task.FromResult((Activity) null);
         }
 
-        public async Task<Activity> RunWithArguments(string argument)
+        public Task<Activity> RunWithArguments(string argument)
         {
-            return null;
+            return Task.FromResult((Activity) null);
         }
     }
 }

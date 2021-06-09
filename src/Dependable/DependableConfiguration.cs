@@ -33,33 +33,29 @@ namespace Dependable
 
         readonly ActivityConfiguration _defaultActivityConfiguration = new ActivityConfiguration();
 
-        readonly Dictionary<Type, ActivityConfiguration> _activityConfiguration =
-            new Dictionary<Type, ActivityConfiguration>();
+        readonly Dictionary<Type, ActivityConfiguration> _activityConfiguration = new Dictionary<Type, ActivityConfiguration>();
 
         public DependableConfiguration UseExceptionLogger(IExceptionLogger exceptionLogger)
         {
-            if (exceptionLogger == null) throw new ArgumentNullException("exceptionLogger");
-            _exceptionLogger = exceptionLogger;
+            _exceptionLogger = exceptionLogger ?? throw new ArgumentNullException(nameof(exceptionLogger));
             return this;
         }
 
         public DependableConfiguration UseDependencyResolver(IDependencyResolver dependencyResolver)
         {
-            if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
-            _dependencyResolver = dependencyResolver;
+            _dependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
             return this;
         }
 
         public DependableConfiguration UsePersistenceProvider(IPersistenceProvider provider)
         {
-            if (provider == null) throw new ArgumentNullException("provider");
-            _persistenceProvider = provider;
+            _persistenceProvider = provider ?? throw new ArgumentNullException(nameof(provider));
             return this;
         }
 
         public DependableConfiguration UseEventSink(IEventSink eventSink)
         {
-            if (eventSink == null) throw new ArgumentNullException("eventSink");
+            if (eventSink == null) throw new ArgumentNullException(nameof(eventSink));
             _eventSinks.Add(eventSink);
             return this;
         }
@@ -183,28 +179,17 @@ namespace Dependable
                 jobMutation);
         }
 
-        TimeSpan IDependableConfiguration.RetryTimerInterval
-        {
-            get { return _defaultRetryTimerInterval; }
-        }
+        TimeSpan IDependableConfiguration.RetryTimerInterval => _defaultRetryTimerInterval;
 
         ActivityConfiguration IDependableConfiguration.For(Type type)
         {
-            ActivityConfiguration configuration;
-
-            return _activityConfiguration.TryGetValue(type, out configuration)
+            return _activityConfiguration.TryGetValue(type, out var configuration)
                 ? configuration
                 : _defaultActivityConfiguration;
         }
 
-        ActivityConfiguration IDependableConfiguration.DefaultActivityConfiguration
-        {
-            get { return _defaultActivityConfiguration; }
-        }
+        ActivityConfiguration IDependableConfiguration.DefaultActivityConfiguration => _defaultActivityConfiguration;
 
-        IEnumerable<ActivityConfiguration> IDependableConfiguration.ActivityConfiguration
-        {
-            get { return _activityConfiguration.Values; }
-        }
+        IEnumerable<ActivityConfiguration> IDependableConfiguration.ActivityConfiguration => _activityConfiguration.Values;
     }
 }

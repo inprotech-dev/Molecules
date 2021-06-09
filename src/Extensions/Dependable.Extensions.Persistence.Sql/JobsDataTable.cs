@@ -3,7 +3,7 @@ using System.Data;
 
 namespace Dependable.Extensions.Persistence.Sql
 {
-    static internal class JobsDataTable
+    internal static class JobsDataTable
     {
         public static DataTable Create()
         {

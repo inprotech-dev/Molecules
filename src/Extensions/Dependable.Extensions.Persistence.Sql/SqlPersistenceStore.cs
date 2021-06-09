@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data.SqlClient;
 using System.Linq;
 using Dapper;
@@ -13,34 +12,31 @@ namespace Dependable.Extensions.Persistence.Sql
 {
     public class SqlPersistenceStore : IPersistenceStore
     {
-        readonly string _instanceName;
-
-        static readonly JsonSerializerSettings DefaultSerializerSettings =
-            new JsonSerializerSettings();
-
-        readonly SqlConnection _connection;
-
         const string Columns =
             "Id, Type, Method, Arguments, CreatedOn, RootId, ParentId, CorrelationId, Status, " +
             "DispatchCount, RetryOn, Continuation, ExceptionFilters, Suspended, InstanceName";
+
+        static readonly JsonSerializerSettings DefaultSerializerSettings = new JsonSerializerSettings();
+
+        readonly SqlConnection _connection;
+        readonly string _instanceName;
 
         static SqlPersistenceStore()
         {
             DefaultSerializerSettings.Converters.Add(new StringEnumConverter());
         }
 
-        public SqlPersistenceStore(string connectionStringName, string instanceName)
+        public SqlPersistenceStore(string connectionString, string instanceName)
         {
-            if (string.IsNullOrWhiteSpace(connectionStringName))
-                throw new ArgumentException("A valid connectionStringName is required.");
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new ArgumentException("A valid connectionString is required.");
 
             if (string.IsNullOrWhiteSpace(instanceName))
                 throw new ArgumentException("A valid instanceName is required.");
 
             _instanceName = instanceName;
-
-            _connection =
-                new SqlConnection(ConfigurationManager.ConnectionStrings[connectionStringName].ConnectionString);
+            
+            _connection = new SqlConnection(connectionString);
 
             _connection.Open();
         }
@@ -49,9 +45,7 @@ namespace Dependable.Extensions.Persistence.Sql
         {
             return
                 _connection.Query(
-                    string.Format(
-                        "select {0} from DependableJobs where Id = @Id and InstanceName = @InstanceName",
-                        Columns),
+                    $"select {Columns} from DependableJobs where Id = @Id and InstanceName = @InstanceName",
                     new {Id = id, InstanceName = _instanceName}).Select(Deserialize).FirstOrDefault();
         }
 
@@ -59,8 +53,8 @@ namespace Dependable.Extensions.Persistence.Sql
         {
             return
                 _connection.Query(
-                    string.Format("select {0} from DependableJobs where CorrelationId = @Id", Columns),
-                    new {Id = correlationId, InstanceName = _instanceName})
+                        $"select {Columns} from DependableJobs where CorrelationId = @Id",
+                        new {Id = correlationId, InstanceName = _instanceName})
                     .Select(Deserialize)
                     .FirstOrDefault();
         }
@@ -69,11 +63,9 @@ namespace Dependable.Extensions.Persistence.Sql
         {
             return
                 _connection.Query(
-                    string.Format(
-                        "select {0} from DependableJobs " +
+                        $"select {Columns} from DependableJobs " +
                         "where Status = @Status and Suspended = 0 and InstanceName = @InstanceName",
-                        Columns),
-                    new {Status = status.ToString(), InstanceName = _instanceName})
+                        new {Status = status.ToString(), InstanceName = _instanceName})
                     .Select(Deserialize)
                     .ToArray();
         }
@@ -96,14 +88,11 @@ namespace Dependable.Extensions.Persistence.Sql
         {
             return
                 _connection.Query(
-                    string.Format(
-                        "select top {0} {1} from DependableJobs " +
+                        $"select top {max} {Columns} from DependableJobs " +
                         "where Type = @Type and suspended = 1 and InstanceName = @InstanceName order by CreatedOn",
-                        max,
-                        Columns),
                         new
                         {
-                            Type = SerializationUtilities.PersistedTypeName(forActivityType), 
+                            Type = SerializationUtilities.PersistedTypeName(forActivityType),
                             InstanceName = _instanceName
                         })
                     .Select(Deserialize);
@@ -113,12 +102,9 @@ namespace Dependable.Extensions.Persistence.Sql
         {
             return
                 _connection.Query(
-                    string.Format(
-                        "select top {0} {1} from DependableJobs " +
-                        "where Type not in (@Exclude) and suspended = 1 and " + 
+                        $"select top {max} {Columns} from DependableJobs " +
+                        "where Type not in (@Exclude) and suspended = 1 and " +
                         "InstanceName = @InstanceName order by CreatedOn",
-                        max,
-                        Columns),
                         new
                         {
                             Exclude = excludeActivityTypes.Select(SerializationUtilities.PersistedTypeName),
@@ -135,15 +121,20 @@ namespace Dependable.Extensions.Persistence.Sql
                     "where Type = COALESCE(@Type, Type) and suspended = 1 and InstanceName = @InstanceName",
                     new
                     {
-                        Type =  type != null ? SerializationUtilities.PersistedTypeName(type) : null, 
+                        Type = type != null ? SerializationUtilities.PersistedTypeName(type) : null,
                         InstanceName = _instanceName
                     });
         }
 
-        static Job Deserialize(dynamic record)
+        public void Dispose()
+        {
+            _connection.Dispose();
+        }
+
+        private static Job Deserialize(dynamic record)
         {
             var arguments = DeserializeArguments(record.Arguments);
-            var exceptionFilters = DesrializeExceptionFilters(record.ExceptionFilters);
+            var exceptionFilters = DeserializeExceptionFilters(record.ExceptionFilters);
 
             var job = new Job(
                 (Guid) record.Id,
@@ -154,7 +145,7 @@ namespace Dependable.Extensions.Persistence.Sql
                 rootId: (Guid) record.RootId,
                 parentId: (Guid?) record.ParentId,
                 correlationId: (Guid) record.CorrelationId,
-                status: Enum.Parse(typeof (JobStatus), record.Status),
+                status: Enum.Parse(typeof(JobStatus), record.Status),
                 dispatchCount: (int) record.DispatchCount,
                 retryOn: (DateTime?) record.RetryOn,
                 exceptionFilters: exceptionFilters,
@@ -214,12 +205,9 @@ namespace Dependable.Extensions.Persistence.Sql
         void Update(Job job)
         {
             var updateQuery = "update DependableJobs set Status = @Status, DispatchCount = @DispatchCount, " +
-                                 "RetryOn = @RetryOn, Continuation = @Continuation, Suspended = @Suspended where Id = @Id " ;
+                              "RetryOn = @RetryOn, Continuation = @Continuation, Suspended = @Suspended where Id = @Id ";
 
-            if (job.Status == JobStatus.CancellationInitiated)
-            {
-                updateQuery += " and status <> 'Completed'";
-            }
+            if (job.Status == JobStatus.CancellationInitiated) updateQuery += " and status <> 'Completed'";
 
             _connection.Execute(updateQuery,
                 new
@@ -241,7 +229,7 @@ namespace Dependable.Extensions.Persistence.Sql
         static object[] DeserializeArguments(string serializedArguments)
         {
             var arguments = JsonConvert.DeserializeObject<StoredArgument[]>(serializedArguments);
-            return arguments.Select(a => a.ToObject()).ToArray();
+            return arguments?.Select(a => a.ToObject()).ToArray();
         }
 
         static string SerializeExceptionFilters(IEnumerable<ExceptionFilter> exceptionFilters)
@@ -255,22 +243,17 @@ namespace Dependable.Extensions.Persistence.Sql
                 }));
         }
 
-        static ExceptionFilter[] DesrializeExceptionFilters(string serializedExceptionFilters)
+        static ExceptionFilter[] DeserializeExceptionFilters(string serializedExceptionFilters)
         {
             var exceptionFilters = JsonConvert.DeserializeObject<StoredExceptionFilter[]>(serializedExceptionFilters);
 
-            return exceptionFilters
+            return exceptionFilters?
                 .Select(f => new ExceptionFilter
                 {
                     Type = Type.GetType(f.TypeName),
                     Method = f.Method,
                     Arguments = f.Arguments.Select(a => a.ToObject()).ToArray()
                 }).ToArray();
-        }
-
-        public void Dispose()
-        {
-            _connection.Dispose();
         }
     }
 }
