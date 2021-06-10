@@ -1,20 +1,24 @@
 <?xml version="1.0"?>
 <package >
   <metadata>
-    <id>cpaglobal-$id$</id>
-    <title>cpaglobal-$id$</title>
+    <id>CpaGlobal.$id$</id>
+    <title>CpaGlobal.$id$</title>
     <version>$version$</version>
     <authors>$author$</authors>
     <owners>$author$</owners>
-    <licenseUrl>http://geeksdiary.github.io/dependable/license.html</licenseUrl>
-    <iconUrl>http://geeksdiary.github.io/dependable/assets/images/Dependable.64.png</iconUrl>
-    <projectUrl>http://geeksdiary.github.io/dependable/</projectUrl>
+    <licenseUrl>http://inprotech-dev.github.io/dependable/license.html</licenseUrl>
+    <iconUrl>http://inprotech-dev.github.io/dependable/assets/images/Dependable.64.png</iconUrl>
+    <projectUrl>http://inprotech-dev.github.io/dependable/</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>$description$</description>
     <releaseNotes></releaseNotes>
     <copyright>Copyright © Dependable Team 2014</copyright>
     <tags>Scheduling Reliable Background Workflow Jobs</tags>
     <dependencies>
+	    <group targetFramework="net5.0" />
+	    <group targetFramework="netstandard2.0">
+		    <dependency id="NETStandard.Library" version="2.0.0" />
+	    </group>
     </dependencies>
   </metadata>
 </package>

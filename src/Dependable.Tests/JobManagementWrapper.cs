@@ -5,7 +5,11 @@ using NSubstitute;
 
 namespace Dependable.Tests
 {
+#pragma warning disable CS0661 // Type defines operator == or operator != but does not override Object.GetHashCode()
+#pragma warning disable CS0660 // Type defines operator == or operator != but does not override Object.GetHashCode()
+
     public class JobManagementWrapper
+
     {
         Job _job;
         readonly World _world;
@@ -57,14 +61,11 @@ namespace Dependable.Tests
             return this;
         }
 
-        public JobStatus Status
-        {
-            get { return _job.Status; }
-        }
+        public JobStatus Status => _job.Status;
 
         public static bool operator ==(Job job, JobManagementWrapper wrapper)
         {
-            return wrapper._job == job;
+            return wrapper?._job == job;
         }
 
         public static bool operator !=(Job job, JobManagementWrapper wrapper)
@@ -74,7 +75,7 @@ namespace Dependable.Tests
 
         public static bool operator ==(JobManagementWrapper wrapper, Job job)
         {            
-            return wrapper._job == job;
+            return wrapper?._job == job;
         }
 
         public static bool operator !=(JobManagementWrapper wrapper, Job job)

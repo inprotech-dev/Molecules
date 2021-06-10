@@ -21,7 +21,7 @@ namespace Dependable.Tests.Dispatcher
             
             var converted = _world.NewActivityToContinuationConverter().Convert(activity, _parent);
             
-            Assert.Equal(1, converted.Jobs.Count());
+            Assert.Single(converted.Jobs);
         }
 
         [Fact]

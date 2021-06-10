@@ -61,7 +61,7 @@ namespace Dependable.Extensions.Persistence.Sql
                 command.ExecuteNonQuery();
                 transaction.Commit();
             }
-         }
+        }
 
         static void connection_InfoMessage(object sender, SqlInfoMessageEventArgs e)
         {
